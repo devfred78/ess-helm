@@ -1,0 +1,71 @@
+# Synapse Configuration Template for Element Server Suite (ESS) on Synology DSM
+server_name: "${SERVER_NAME}"
+public_baseurl: "${PUBLIC_BASEURL}/"
+pid_file: /var/run/synapse.pid
+
+listeners:
+  - port: 8008
+    bind_addresses:
+      - '127.0.0.1'
+      - '::1'
+    type: http
+    tls: false
+    x_forwarded: true
+    resources:
+      - names: [client, federation]
+        compress: true
+
+database:
+  name: psycopg2
+  args:
+    user: "${POSTGRES_USER}"
+    password: "${POSTGRES_PASSWORD}"
+    database: "${SYNAPSE_DB_NAME}"
+    host: "${POSTGRES_HOST}"
+    port: ${POSTGRES_PORT}
+    cp_min: 5
+    cp_max: 10
+
+signing_key_path: "${SECRETS_DIR}/synapse.signing.key"
+macaroon_secret_key: "${SYNAPSE_MACAROON_SECRET}"
+registration_shared_secret: "${SYNAPSE_REGISTRATION_SHARED_SECRET}"
+
+media_store_path: "${DATA_DIR}/media"
+max_upload_size: 50M
+
+enable_registration: false
+allow_guest_access: false
+report_stats: false
+
+# Intégration Matrix Authentication Service (MAS)
+matrix_authentication_service:
+  enabled: ${ENABLE_MAS}
+  secret: "${MAS_SYNAPSE_SHARED_SECRET}"
+  endpoint: "http://127.0.0.1:8081"
+
+# Fonctionnalités expérimentales pour Matrix 2.0 / Element Call RTC
+experimental_features:
+  msc3861:
+    enabled: ${ENABLE_MAS}
+    issuer: "${PUBLIC_BASEURL}/auth/"
+    client_id: "00000000000000000000000000"
+    client_auth_method: "client_secret_basic"
+    client_secret: "${MAS_SYNAPSE_SHARED_SECRET}"
+    admin_token: "${MAS_ADMIN_TOKEN}"
+  msc4143_enabled: true
+  msc4222_enabled: true
+
+# Sécurité réseau et plage locale
+ip_range_blacklist:
+  - '127.0.0.0/8'
+  - '10.0.0.0/8'
+  - '172.16.0.0/12'
+  - '192.168.0.0/16'
+  - '100.64.0.0/10'
+  - '169.254.0.0/16'
+  - '::1/128'
+  - 'fe80::/10'
+  - 'fc00::/7'
+
+ip_range_whitelist:
+  - '127.0.0.1/32'

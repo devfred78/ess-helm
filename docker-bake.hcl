@@ -12,6 +12,12 @@ target "matrix-tools" {
   context = "./matrix-tools"
 }
 
+target "ess-synology" {
+  inherits = ["docker-metadata-action"]
+  dockerfile = "Dockerfile"
+  context = "./docker/synology"
+}
+
 // The image the browser server runs in. The integration tests drive it
 // (tests/integration/fixtures/playwright.py).
 // Unlike matrix-tools it does not inherit the metadata target: it is not published under

@@ -1,0 +1,47 @@
+# Matrix Authentication Service (MAS) Configuration Template for Synology DSM
+http:
+  public_base: "${PUBLIC_BASEURL}/auth/"
+  issuer: "${PUBLIC_BASEURL}/auth/"
+  listeners:
+    - name: web
+      binds:
+        - host: "127.0.0.1"
+          port: 8081
+      resources:
+        - name: human
+        - name: discovery
+        - name: oauth
+        - name: compat
+        - name: assets
+        - name: graphql
+          undocumented_oauth2_access: true
+        - name: adminapi
+
+database:
+  host: "${POSTGRES_HOST}"
+  port: ${POSTGRES_PORT}
+  username: "${POSTGRES_USER}"
+  password: "${POSTGRES_PASSWORD}"
+  database: "${MAS_DB_NAME}"
+
+secrets:
+  encryption: "${MAS_ENCRYPTION_SECRET}"
+  keys:
+    - key_file: "${SECRETS_DIR}/mas-rsa.key"
+    - key_file: "${SECRETS_DIR}/mas-ecdsa.key"
+
+matrix:
+  homeserver: "${SERVER_NAME}"
+  secret: "${MAS_SYNAPSE_SHARED_SECRET}"
+  endpoint: "http://127.0.0.1:8008"
+  kind: synapse_modern
+
+clients:
+  - client_id: "00000000000000000000000000"
+    client_auth_method: "client_secret_basic"
+    client_secret: "${MAS_SYNAPSE_SHARED_SECRET}"
+    client_name: "Synapse MSC3861 Integration"
+    redirect_uris: []
+
+passwords:
+  enabled: true
