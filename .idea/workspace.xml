@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation." />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="696" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="docker_synology" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "devfred78"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/devfred78/ess-helm.git",
+    "accountId": "65340fd9-38b9-436f-b01f-4617e95a51f0"
+  }
+}]]></component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.5904963307147653" />
+      <entry key="MS500" value="1.900001929793512" />
+      <entry key="S2" value="1.9740042685432408" />
+      <entry key="S5" value="1.9895194703804906" />
+      <entry key="S10" value="1.9947502769917205" />
+      <entry key="S30" value="2.3453032758884556" />
+      <entry key="S60" value="8.391594948336888" />
+      <entry key="M2" value="31.90531745833364" />
+      <entry key="M5" value="83.13017505826154" />
+      <entry key="M10" value="122.49457469092093" />
+      <entry key="M15" value="153.052618684132" />
+      <entry key="M30" value="232.55328640365227" />
+      <entry key="H1" value="324.6581162655186" />
+      <entry key="H2" value="397.79133429340226" />
+      <entry key="H4" value="444.26400557317635" />
+      <entry key="D1" value="489.2415349259163" />
+      <entry key="W1" value="497.58948484242313" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.4524491209497248" />
+      <entry key="MS500" value="1.856798941433362" />
+      <entry key="S2" value="1.962222713571671" />
+      <entry key="S5" value="1.9847237418743566" />
+      <entry key="S10" value="1.9923383806329005" />
+      <entry key="S30" value="2.344445170506193" />
+      <entry key="S60" value="8.390720743726162" />
+      <entry key="M2" value="31.90401001907545" />
+      <entry key="M5" value="83.12888707451467" />
+      <entry key="M10" value="122.49362172059276" />
+      <entry key="M15" value="153.05180226314084" />
+      <entry key="M30" value="232.55262234284135" />
+      <entry key="H1" value="324.657630767726" />
+      <entry key="H2" value="397.7910298900818" />
+      <entry key="H4" value="444.26383368661936" />
+      <entry key="D1" value="489.2415030942837" />
+      <entry key="W1" value="497.5894802105142" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 2,
+  "fromUser": false
+}]]></component>
+  <component name="ProjectId" id="3KYaWJEd2wdptbqdQ5k8up8CeAN" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.MCP Project settings loaded": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "junie.onboarding.icon.badge.shown": "true",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
+    "to.speed.mode.migration.done": "true"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-73a66231627c-5bd6d13a2a75-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-262.10968.92" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="" />
+      <created>1791736985821</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1791736985821</updated>
+    </task>
+    <task id="LOCAL-00001" summary="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation.">
+      <option name="closed" value="true" />
+      <created>1791737975184</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1791737975184</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation." />
+    <option name="LAST_COMMIT_MESSAGE" value="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation." />
+  </component>
+</project>
