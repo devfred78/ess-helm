@@ -1,0 +1,100 @@
+{
+    admin off
+    auto_https off
+}
+
+:8080 {
+    # Logging
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+
+    # En-têtes CORS et de sécurité
+    header {
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "X-Requested-With, Content-Type, Authorization, Date"
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    # Matrix Well-Known Delegation
+    handle /.well-known/matrix/server {
+        header Content-Type application/json
+        respond `{"m.server": "{$SERVER_NAME}:443"}` 200
+    }
+
+    handle /.well-known/matrix/client {
+        header Content-Type application/json
+        respond `{"m.homeserver": {"base_url": "{$PUBLIC_BASEURL}"}, "org.matrix.msc2965.authentication": {"issuer": "{$PUBLIC_BASEURL}/auth/", "account": "{$PUBLIC_BASEURL}/auth/account"}}` 200
+    }
+
+    handle /.well-known/openid-configuration* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    # Matrix Authentication Service (MAS)
+    handle /auth/* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle /oauth2/* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle_path /_matrix/client/v3/login* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle_path /_matrix/client/v3/auth/* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle_path /_matrix/client/v3/logout* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle_path /_matrix/client/v3/refresh* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    handle_path /_synapse/admin/v1/register* {
+        reverse_proxy 127.0.0.1:8081
+    }
+
+    # Synapse Homeserver Matrix APIs
+    handle /_matrix/* {
+        reverse_proxy 127.0.0.1:8008 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    handle /_synapse/* {
+        reverse_proxy 127.0.0.1:8008 {
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    # Element Admin Console
+    handle_path /admin* {
+        root * /var/www/element-admin
+        file_server
+        try_files {path} /index.html
+    }
+
+    # Element Web Client
+    handle {
+        root * /var/www/element-web
+        file_server
+        try_files {path} /index.html
+    }
+}

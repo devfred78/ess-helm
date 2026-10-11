@@ -1,0 +1,38 @@
+# Docker Compose for Element Server Suite (ESS) Community on Synology DSM 7.1
+version: '3.8'
+
+services:
+  ess-community:
+    image: ghcr.io/${GITHUB_REPOSITORY:-element-hq/ess-helm}/ess-synology:latest
+    container_name: ess-community
+    restart: unless-stopped
+    ports:
+      # Port HTTP interne (à connecter au proxy inversé de Synology DSM)
+      - "8080:8080"
+      # Port optionnel pour la fédération Matrix directe (si utilisé)
+      # - "8448:8448"
+    volumes:
+      # Montage persistant des données (Synapse, MAS, Postgres, Médias, Clés)
+      # Adapter "/volume1/docker/element" selon le volume Synology configuré
+      - /volume1/docker/element:/data
+    environment:
+      # Nom du serveur Matrix (ex: monserveur.synology.me ou domaine.com)
+      - SERVER_NAME=${SERVER_NAME:-matrix.exemple.com}
+      # URL publique d'accès (derrière le reverse proxy SSL de Synology DSM)
+      - PUBLIC_BASEURL=${PUBLIC_BASEURL:-https://matrix.exemple.com}
+      # Activation des composants intégrés
+      - ENABLE_INTERNAL_POSTGRES=true
+      - ENABLE_ELEMENT_WEB=true
+      - ENABLE_ELEMENT_ADMIN=true
+      - ENABLE_MAS=true
+      # Identifiants du compte administrateur initial (optionnel au premier démarrage)
+      - INITIAL_ADMIN_USER=${INITIAL_ADMIN_USER:-admin}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-ChangeMeStrongPass123!}
+      # Fuseau horaire
+      - TZ=Europe/Paris
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8080/_matrix/client/versions || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
