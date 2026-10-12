@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Add IntelliJ IDEA project settings to version control.">
+    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/synology/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/docker/synology/Dockerfile" afterDir="false" />
     </list>
@@ -161,7 +161,15 @@
       <option name="project" value="LOCAL" />
       <updated>1791741320190</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration">
+      <option name="closed" value="true" />
+      <created>1791786245724</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1791786245724</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -181,6 +189,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation." />
     <MESSAGE value="Add IntelliJ IDEA project settings to version control." />
-    <option name="LAST_COMMIT_MESSAGE" value="Add IntelliJ IDEA project settings to version control." />
+    <MESSAGE value="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration" />
   </component>
 </project>
