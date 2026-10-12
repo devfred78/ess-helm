@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 
 # Stage 1: Extraction des binaires et assets officiels ESS
-FROM ghcr.io/element-hq/matrix-authentication-service:v0.16.1 AS mas-src
-FROM ghcr.io/element-hq/element-web:v1.11.95 AS element-web-src
-FROM ghcr.io/element-hq/element-admin:v0.4.0 AS element-admin-src
+FROM oci.element.io/matrix-authentication-service:1.26.0 AS mas-src
+FROM oci.element.io/element-web:v1.12.30 AS element-web-src
+FROM oci.element.io/element-admin:0.1.15 AS element-admin-src
 
 # Stage 2: Image finale basée sur Synapse officiel
-FROM ghcr.io/element-hq/synapse:v1.127.0
+FROM oci.element.io/synapse:v1.162.0
 
 USER root
 
@@ -51,7 +51,7 @@ COPY --from=mas-src /usr/local/bin/mas-cli /usr/local/bin/mas-cli
 
 # Copie des applications Element Web et Element Admin
 COPY --from=element-web-src /app /var/www/element-web
-COPY --from=element-admin-src /app /var/www/element-admin
+COPY --from=element-admin-src /dist /var/www/element-admin
 
 # Création des répertoires de données et templates
 RUN mkdir -p /data /templates /var/log/supervisor /var/run/postgresql \
