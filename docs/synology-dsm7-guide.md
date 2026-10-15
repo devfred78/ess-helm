@@ -49,14 +49,36 @@ Toutes les données, configurations, bases de données, clés de chiffrement et 
 Cette méthode ne nécessite aucune ligne de commande.
 
 #### Étape 1 : Téléchargement de l'image
-1. Ouvrez l'application **Docker** sur DSM.
-2. Allez dans l'onglet **Registre**.
-3. Cliquez sur **Paramètres** > **Ajouter** pour ajouter le registre GitHub (GHCR) si nécessaire, ou téléchargez l'image construite par votre Github Action :
-   `ghcr.io/<votre-organisation-ou-user>/ess-synology:latest`
-4. Cliquez sur **Télécharger**.
+
+L'image est construite par le workflow GitHub Actions `docker-synology.yml` et publiée sur le GitHub Container Registry (GHCR) à l'adresse :
+
+`ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest`
+
+(par exemple `ghcr.io/devfred78/ess-helm/ess-synology:latest`). Elle est disponible pour les architectures `linux/amd64` et `linux/arm64`.
+
+> **Note :** l'artefact `*.dockerbuild` attaché à l'exécution du workflow n'est qu'un historique de build : il ne contient pas l'image.
+
+1. **Visibilité du package** : un package GHCR est généralement privé lors de sa première publication. Sur GitHub, ouvrez l'onglet **Packages** de votre profil, puis **ess-synology** > **Package settings** > **Change visibility** :
+   - rendez-le **Public** pour pouvoir le télécharger sans authentification ;
+   - ou laissez-le privé et créez un *Personal Access Token (classic)* disposant du scope `read:packages`.
+
+2. **Téléchargement sur le NAS (SSH)** : l'onglet **Registre** de l'application Docker de DSM 7.1 ne sait pas rechercher d'images sur GHCR. Activez SSH (**Panneau de configuration** > **Terminal & SNMP**), connectez-vous au NAS puis exécutez :
+   ```bash
+   # Uniquement si le package est privé (mot de passe = votre token read:packages)
+   sudo docker login ghcr.io -u <votre-utilisateur>
+
+   sudo docker pull ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest
+   ```
+
+3. **Alternative hors ligne** : depuis un PC équipé de Docker, exportez l'image dans une archive (remplacez `linux/amd64` par `linux/arm64` pour un NAS ARM 64 bits) :
+   ```bash
+   docker pull --platform linux/amd64 ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest
+   docker save -o ess-synology.tar ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest
+   ```
+   Puis, dans l'application **Docker** de DSM : onglet **Image** > **Ajouter** > **Ajouter à partir d'un fichier** et sélectionnez `ess-synology.tar`.
 
 #### Étape 2 : Création du conteneur
-1. Allez dans l'onglet **Image**, sélectionnez `ess-synology:latest` et cliquez sur **Lancer**.
+1. Allez dans l'onglet **Image**, sélectionnez `ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest` et cliquez sur **Lancer**.
 2. **Paramètres généraux** :
    - Nom du conteneur : `ess-community`
    - Cochez **Activer le redémarrage automatique**.
@@ -91,6 +113,7 @@ Si vous préférez déployer en ligne de commande ou via le planificateur de tâ
 
 1. Déposez le fichier `docker-compose.yml` dans `/volume1/docker/element/docker-compose.yml`.
 2. Modifiez les variables `SERVER_NAME` et `PUBLIC_BASEURL` avec votre nom de domaine.
+   Vérifiez également la ligne `image:` : sans variable `GITHUB_REPOSITORY` définie, elle pointe vers `ghcr.io/element-hq/ess-helm/ess-synology:latest`. Remplacez-la par le chemin de votre image (ex : `ghcr.io/devfred78/ess-helm/ess-synology:latest`) ou lancez la commande avec `GITHUB_REPOSITORY=<utilisateur>/<dépôt>` en préfixe.
 3. Exécutez la commande suivante en SSH (ou via une tâche utilisateur déclenchée dans DSM) :
    ```bash
    cd /volume1/docker/element
