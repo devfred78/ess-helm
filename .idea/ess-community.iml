@@ -5,6 +5,4 @@
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="module" module-name="ess-community-integration-tests" exported="" />
   </component>
-  <component name="PackageRequirementsSettings" />
-  <component name="ReSTService" />
 </module>

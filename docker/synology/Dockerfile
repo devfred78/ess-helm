@@ -34,7 +34,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     jq \
     openssl \
     && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /usr/share/keyrings/postgresql-archive-keyring.gpg \
-    && echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | tee /etc/apt/sources.list.d/postgresql.list \
+    && . /etc/os-release \
+    && echo "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.gpg] http://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | tee /etc/apt/sources.list.d/postgresql.list \
     && apt-get update && apt-get install -y --no-install-recommends \
     postgresql-16 \
     postgresql-client-16 \

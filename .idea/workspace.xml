@@ -4,7 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration">
+    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Add PostgreSQL repository and install PostgreSQL 16 in Synology Dockerfile">
+      <change beforePath="$PROJECT_DIR$/.idea/ess-community.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ess-community.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/ess-migration-tool.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ess-migration-tool.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker/synology/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/docker/synology/Dockerfile" afterDir="false" />
     </list>
@@ -14,7 +16,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="691" />
+    <option name="cachedIndexableFilesCount" value="707" />
     <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
   </component>
   <component name="Git.Settings">
@@ -127,6 +129,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
+    "settings.editor.selected.configurable": "preferences.editor",
     "to.speed.mode.migration.done": "true"
   }
 }]]></component>
@@ -169,7 +172,23 @@
       <option name="project" value="LOCAL" />
       <updated>1791786245724</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="Update Synology Dockerfile to streamline dependencies and enhance IntelliJ IDEA project settings">
+      <option name="closed" value="true" />
+      <created>1791786853670</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1791786853670</updated>
+    </task>
+    <task id="LOCAL-00005" summary="Add PostgreSQL repository and install PostgreSQL 16 in Synology Dockerfile">
+      <option name="closed" value="true" />
+      <created>1791787056729</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1791787056729</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -190,6 +209,8 @@
     <MESSAGE value="Add Synology DSM 7 support for Element Server Suite (ESS) Community by including Dockerfile, Compose, templates, scripts, and documentation." />
     <MESSAGE value="Add IntelliJ IDEA project settings to version control." />
     <MESSAGE value="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration" />
-    <option name="LAST_COMMIT_MESSAGE" value="Update Synology Dockerfile to use OCI sources and optimize IntelliJ IDEA project settings configuration" />
+    <MESSAGE value="Update Synology Dockerfile to streamline dependencies and enhance IntelliJ IDEA project settings" />
+    <MESSAGE value="Add PostgreSQL repository and install PostgreSQL 16 in Synology Dockerfile" />
+    <option name="LAST_COMMIT_MESSAGE" value="Add PostgreSQL repository and install PostgreSQL 16 in Synology Dockerfile" />
   </component>
 </project>
