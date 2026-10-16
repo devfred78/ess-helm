@@ -79,23 +79,15 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
 
 #### Étape 2 : Création du conteneur
 1. Allez dans l'onglet **Image**, sélectionnez `ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest` et cliquez sur **Lancer**.
-2. **Paramètres généraux** :
+2. **Réseau** :
+   - Sélectionnez **Utiliser les réseaux sélectionnés**, et choisissez **bridge**.
+
+3. **Paramètres généraux** :
    - Nom du conteneur : `ess-community`
    - Cochez **Activer le redémarrage automatique**.
    - Cliquez sur **Paramètres avancés**.
 
-3. **Paramètres de volume** :
-   - Allez dans l'onglet **Volume** > **Ajouter un dossier**.
-   - Dossier sur le NAS : `docker/element`
-   - Chemin d'accès dans le conteneur : `/data` (en lecture/écriture).
-
-4. **Paramètres de port** :
-   - Allez dans l'onglet **Paramètres de port**.
-   - Port local : `8080` (ou un port libre de votre choix).
-   - Port du conteneur : `8080`.
-   - Type : `TCP`.
-
-5. **Variables d'environnement** :
+4. **Variables d'environnement** :
    - Allez dans l'onglet **Environnement** et ajoutez/modifiez les variables suivantes :
      - `SERVER_NAME` : `matrix.votredomaine.fr` (votre nom de domaine)
      - `PUBLIC_BASEURL` : `https://matrix.votredomaine.fr`
@@ -104,8 +96,23 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
      - `TZ` : `Europe/Paris`
    - Laissez les autres variables pré-remplies (héritées de l'image) telles quelles.
    - Si DSM refuse d'enregistrer parce qu'une variable est vide (cas de `SYNAPSE_VERSION_STRING` sur les images antérieures à ce correctif), renseignez-y la version de Synapse, par exemple `1.162.0` : cette valeur sert uniquement à l'affichage de la version du serveur.
+   - Cliquez sur **Sauvegarder**, puis sur **Suivant**
 
-6. Cliquez sur **Appliquer**, puis **Suivant** et enfin **Terminé** pour démarrer le conteneur.
+5. **Paramètres des port** :
+   - Pour le port du conteneur `8080`, indiquez le Port local : `8080` (ou un port libre de votre choix).
+   - Laissez le reste tel quel.
+   - Cliquez sur **Suivant**
+
+6. **Paramètres de volume** :
+   - Cliquez sur **Ajouter un dossier**.
+   - Dossier sur le NAS : `docker/element`
+   - Chemin d'accès dans le conteneur : `/data` (en lecture/écriture).
+   - Cliquez sur **Suivant**
+
+7. **Résumé** :
+   - Vérifiez les éléments indiqués
+   - Cochez la case **Exécuter ce conteneur lorsque l'assistant a terminé**
+   - Cliquez sur **Effectué**
 
 ---
 
