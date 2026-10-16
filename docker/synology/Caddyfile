@@ -22,65 +22,46 @@
     }
 
     # Matrix Well-Known Delegation
+    # (fichier passé par envsubst dans l'entrypoint : utiliser ${VAR}, pas {$VAR})
     handle /.well-known/matrix/server {
         header Content-Type application/json
-        respond `{"m.server": "{$SERVER_NAME}:443"}` 200
+        respond `{"m.server": "${SERVER_NAME}:443"}` 200
     }
 
     handle /.well-known/matrix/client {
         header Content-Type application/json
-        respond `{"m.homeserver": {"base_url": "{$PUBLIC_BASEURL}"}, "org.matrix.msc2965.authentication": {"issuer": "{$PUBLIC_BASEURL}/auth/", "account": "{$PUBLIC_BASEURL}/auth/account"}}` 200
+        respond `{"m.homeserver": {"base_url": "${PUBLIC_BASEURL}"}, "org.matrix.msc2965.authentication": {"issuer": "${PUBLIC_BASEURL}/auth/", "account": "${PUBLIC_BASEURL}/auth/account"}}` 200
     }
 
-    handle /.well-known/openid-configuration* {
+    # Matrix Authentication Service (MAS), servi sous le préfixe /auth (cf. mas.yaml)
+    handle /.well-known/openid-configuration {
+        rewrite * /auth/.well-known/openid-configuration
         reverse_proxy 127.0.0.1:8081
     }
 
-    # Matrix Authentication Service (MAS)
     handle /auth/* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle /oauth2/* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle_path /_matrix/client/v3/login* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle_path /_matrix/client/v3/auth/* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle_path /_matrix/client/v3/logout* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle_path /_matrix/client/v3/refresh* {
-        reverse_proxy 127.0.0.1:8081
-    }
-
-    handle_path /_synapse/admin/v1/register* {
         reverse_proxy 127.0.0.1:8081
     }
 
     # Synapse Homeserver Matrix APIs
     handle /_matrix/* {
-        reverse_proxy 127.0.0.1:8008 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
+        # Endpoints de compatibilité (login/logout/refresh) pris en charge par MAS
+        @mas_compat path_regexp ^/_matrix/client/(r0|v3)/(login|logout|refresh)(/.*)?$
+        handle @mas_compat {
+            rewrite * /auth{path}
+            reverse_proxy 127.0.0.1:8081
+        }
+
+        handle {
+            reverse_proxy 127.0.0.1:8008 {
+                header_up X-Real-IP {remote_host}
+            }
         }
     }
 
     handle /_synapse/* {
         reverse_proxy 127.0.0.1:8008 {
-            header_up Host {host}
             header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-For {remote_host}
-            header_up X-Forwarded-Proto {scheme}
         }
     }
 

@@ -250,12 +250,12 @@ Le téléchargement remplace l'étiquette `latest` mais ne modifie pas le conten
 **Si le conteneur a été créé avec l'interface graphique (Méthode 1) :**
 
 1. Dans l'application **Docker** de DSM, onglet **Conteneur**, sélectionnez `ess-community` et cliquez sur **Arrêter**.
-2. Toujours sur `ess-community`, cliquez sur **Action** > **Effacer** (*Clear*). DSM recrée le conteneur à partir de la nouvelle image `latest` en conservant ses paramètres : volume `/data`, ports, variables d'environnement et redémarrage automatique.
+2. Toujours sur `ess-community`, cliquez sur **Action** > **Réinitialiser** (*Clear*). DSM recrée le conteneur à partir de la nouvelle image `latest` en conservant ses paramètres : volume `/data`, ports, variables d'environnement et redémarrage automatique.
 3. Cliquez sur **Démarrer**.
 
 > **Variables d'environnement :** le conteneur garde les variables enregistrées lors de sa création ; les nouvelles valeurs par défaut de l'image ne sont pas reprises. Si la nouvelle image change de version de Synapse, mettez à jour la variable `SYNAPSE_VERSION_STRING` (conteneur arrêté : **Modifier** > **Paramètres avancés** > **Environnement**) : elle ne sert qu'à l'affichage de la version, mais gardera sinon l'ancienne valeur.
 
-Si l'action **Effacer** n'est pas disponible, supprimez le conteneur (conteneur arrêté : **Action** > **Supprimer**) puis recréez-le en suivant l'[Étape 2 de la Méthode 1](#étape-2--création-du-conteneur) avec exactement les mêmes paramètres, en particulier le même dossier `docker/element` monté sur `/data`. Supprimer le conteneur n'efface pas ce dossier.
+Si l'action **Réinitialiser** n'est pas disponible, supprimez le conteneur (conteneur arrêté : **Action** > **Supprimer**) puis recréez-le en suivant l'[Étape 2 de la Méthode 1](#étape-2--création-du-conteneur) avec exactement les mêmes paramètres, en particulier le même dossier `docker/element` monté sur `/data`. Supprimer le conteneur n'efface pas ce dossier.
 
 **Si le conteneur a été créé avec Docker Compose (Méthode 2) :**
 

@@ -4,6 +4,8 @@ http:
   issuer: "${PUBLIC_BASEURL}/auth/"
   listeners:
     - name: web
+      # MAS est publié sous ${PUBLIC_BASEURL}/auth/ : toutes ses routes sont servies sous /auth
+      prefix: "/auth"
       binds:
         - host: "127.0.0.1"
           port: 8081

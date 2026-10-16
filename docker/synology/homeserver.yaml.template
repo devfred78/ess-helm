@@ -40,7 +40,8 @@ report_stats: false
 matrix_authentication_service:
   enabled: ${ENABLE_MAS}
   secret: "${MAS_SYNAPSE_SHARED_SECRET}"
-  endpoint: "http://127.0.0.1:8081"
+  # Le "/" final est nécessaire : Synapse y ajoute ".well-known/openid-configuration", "oauth2/introspect"...
+  endpoint: "http://127.0.0.1:8081/auth/"
 
 # Fonctionnalités expérimentales pour Matrix 2.0 / Element Call RTC
 # (msc3861 est remplacé par la section matrix_authentication_service ci-dessus :
