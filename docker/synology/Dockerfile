@@ -2,18 +2,25 @@
 #
 # SPDX-License-Identifier: AGPL-3.0-only
 
+# Version de Synapse utilisée comme image de base
+ARG SYNAPSE_VERSION=1.162.0
+
 # Stage 1: Extraction des binaires et assets officiels ESS
 FROM oci.element.io/matrix-authentication-service:1.26.0 AS mas-src
 FROM oci.element.io/element-web:v1.12.30 AS element-web-src
 FROM oci.element.io/element-admin:0.1.15 AS element-admin-src
 
 # Stage 2: Image finale basée sur Synapse officiel
-FROM oci.element.io/synapse:v1.162.0
+FROM oci.element.io/synapse:v${SYNAPSE_VERSION}
+ARG SYNAPSE_VERSION
 
 USER root
 
 # Définition des variables d'environnement
-ENV DEBIAN_FRONTEND=noninteractive \
+# SYNAPSE_VERSION_STRING est héritée vide de l'image Synapse, or l'interface
+# Docker de DSM 7.1 refuse d'enregistrer une variable d'environnement vide.
+ENV SYNAPSE_VERSION_STRING=${SYNAPSE_VERSION} \
+    DEBIAN_FRONTEND=noninteractive \
     DATA_DIR=/data \
     CONFIG_DIR=/data/config \
     SECRETS_DIR=/data/secrets \

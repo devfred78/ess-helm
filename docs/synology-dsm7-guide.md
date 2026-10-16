@@ -102,6 +102,8 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
      - `INITIAL_ADMIN_USER` : `admin` (nom du compte administrateur initial)
      - `INITIAL_ADMIN_PASSWORD` : `UnMotDePasseTresSecurise!`
      - `TZ` : `Europe/Paris`
+   - Laissez les autres variables pré-remplies (héritées de l'image) telles quelles.
+   - Si DSM refuse d'enregistrer parce qu'une variable est vide (cas de `SYNAPSE_VERSION_STRING` sur les images antérieures à ce correctif), renseignez-y la version de Synapse, par exemple `1.162.0` : cette valeur sert uniquement à l'affichage de la version du serveur.
 
 6. Cliquez sur **Appliquer**, puis **Suivant** et enfin **Terminé** pour démarrer le conteneur.
 

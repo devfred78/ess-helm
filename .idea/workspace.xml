@@ -4,9 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Add PostgreSQL repository and configure installation of PostgreSQL 16 in Synology Dockerfile, and update IntelliJ IDEA project settings">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+    <list default="true" id="94a314e1-08dd-4259-acfe-43bbe4bc76b2" name="Changes" comment="Update IntelliJ IDEA workspace and improve Synology DSM 7 Docker guide for enhanced clarity and usability">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docker/synology/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/docker/synology/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/synology-dsm7-guide.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/synology-dsm7-guide.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -44,23 +44,23 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.7136805810774887" />
-      <entry key="MS500" value="3.9162009014756727" />
-      <entry key="S2" value="11.466358120153592" />
-      <entry key="S5" value="20.174680411211366" />
-      <entry key="S10" value="25.492615171709396" />
-      <entry key="S30" value="30.205193211204044" />
-      <entry key="S60" value="32.583796160908264" />
-      <entry key="M2" value="45.09026720806284" />
-      <entry key="M5" value="103.3236119747288" />
-      <entry key="M10" value="179.1280204851603" />
-      <entry key="M15" value="232.71472497678445" />
-      <entry key="M30" value="345.00178874757063" />
-      <entry key="H1" value="467.0305239757561" />
-      <entry key="H2" value="565.5076069960086" />
-      <entry key="H4" value="629.3802594485422" />
-      <entry key="D1" value="692.2291417967296" />
-      <entry key="W1" value="704.006552012456" />
+      <entry key="MS100" value="1.784433072121822" />
+      <entry key="MS500" value="5.734758515930341" />
+      <entry key="S2" value="14.552455539391815" />
+      <entry key="S5" value="26.880519332982896" />
+      <entry key="S10" value="44.93901511294394" />
+      <entry key="S30" value="94.55423283917969" />
+      <entry key="S60" value="137.50602936191098" />
+      <entry key="M2" value="184.35535230039028" />
+      <entry key="M5" value="242.47366035619905" />
+      <entry key="M10" value="308.67844943596566" />
+      <entry key="M15" value="367.28522884042576" />
+      <entry key="M30" value="502.70159406944754" />
+      <entry key="H1" value="658.8350412151584" />
+      <entry key="H2" value="791.111619835049" />
+      <entry key="H4" value="879.7910337540817" />
+      <entry key="D1" value="969.1515687732164" />
+      <entry key="W1" value="986.1209129340255" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
@@ -82,23 +82,23 @@
       <entry key="W1" value="0.0" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.6250870947649263" />
-      <entry key="MS500" value="3.8761836752307084" />
-      <entry key="S2" value="11.43764888882912" />
-      <entry key="S5" value="20.154098418689117" />
-      <entry key="S10" value="25.47948365288166" />
-      <entry key="S30" value="30.19996861590329" />
-      <entry key="S60" value="32.580964511452194" />
-      <entry key="M2" value="45.08822237145411" />
-      <entry key="M5" value="103.32148177662785" />
-      <entry key="M10" value="179.12608820215144" />
-      <entry key="M15" value="232.7130411630951" />
-      <entry key="M30" value="345.0005467265872" />
-      <entry key="H1" value="467.0296899097753" />
-      <entry key="H2" value="565.5071045091481" />
-      <entry key="H4" value="629.379980543118" />
-      <entry key="D1" value="692.2290907795341" />
-      <entry key="W1" value="704.0065446029706" />
+      <entry key="MS100" value="1.6890989008898207" />
+      <entry key="MS500" value="5.680377200179067" />
+      <entry key="S2" value="14.51807080754742" />
+      <entry key="S5" value="26.855331697472124" />
+      <entry key="S10" value="44.91820480948549" />
+      <entry key="S30" value="94.53995303150252" />
+      <entry key="S60" value="137.49572636005183" />
+      <entry key="M2" value="184.34846299785096" />
+      <entry key="M5" value="242.4699878878399" />
+      <entry key="M10" value="308.6759696498033" />
+      <entry key="M15" value="367.28316824627234" />
+      <entry key="M30" value="502.70008796761397" />
+      <entry key="H1" value="658.8340150777482" />
+      <entry key="H2" value="791.1109915321957" />
+      <entry key="H4" value="879.7906810434847" />
+      <entry key="D1" value="969.1515035182855" />
+      <entry key="W1" value="986.1209034364509" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -206,7 +206,15 @@
       <option name="project" value="LOCAL" />
       <updated>1792095071280</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Update IntelliJ IDEA workspace and improve Synology DSM 7 Docker guide for enhanced clarity and usability">
+      <option name="closed" value="true" />
+      <created>1792100509617</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1792100509617</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -230,6 +238,7 @@
     <MESSAGE value="Update Synology Dockerfile to streamline dependencies and enhance IntelliJ IDEA project settings" />
     <MESSAGE value="Add PostgreSQL repository and install PostgreSQL 16 in Synology Dockerfile" />
     <MESSAGE value="Add PostgreSQL repository and configure installation of PostgreSQL 16 in Synology Dockerfile, and update IntelliJ IDEA project settings" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add PostgreSQL repository and configure installation of PostgreSQL 16 in Synology Dockerfile, and update IntelliJ IDEA project settings" />
+    <MESSAGE value="Update IntelliJ IDEA workspace and improve Synology DSM 7 Docker guide for enhanced clarity and usability" />
+    <option name="LAST_COMMIT_MESSAGE" value="Update IntelliJ IDEA workspace and improve Synology DSM 7 Docker guide for enhanced clarity and usability" />
   </component>
 </project>
