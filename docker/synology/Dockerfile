@@ -56,8 +56,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copie du binaire MAS (Matrix Authentication Service)
+# Copie du binaire MAS (Matrix Authentication Service) et de ses ressources
+# (templates, policy.wasm, assets, traductions), indispensables à `mas-cli server`
 COPY --from=mas-src /usr/local/bin/mas-cli /usr/local/bin/mas-cli
+COPY --from=mas-src /usr/local/share/mas-cli /usr/local/share/mas-cli
 
 # Copie des applications Element Web et Element Admin
 COPY --from=element-web-src /app /var/www/element-web

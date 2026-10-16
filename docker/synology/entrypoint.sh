@@ -46,11 +46,11 @@ fi
 # ==============================================================================
 echo "[1/4] Vérification et génération des clés de chiffrement..."
 
-# Clé de signature Synapse
-if [ ! -f "$SECRETS_DIR/synapse.signing.key" ]; then
+# Clé de signature Synapse (format attendu : "ed25519 <key_id> <clé base64>")
+# Une clé existante au mauvais format (ancienne génération via openssl) est régénérée.
+if [ ! -f "$SECRETS_DIR/synapse.signing.key" ] || ! grep -q '^ed25519 ' "$SECRETS_DIR/synapse.signing.key"; then
     echo "  -> Génération de la clé de signature Synapse..."
-    python3 -c "import synapse.app.homeserver; from synapse.crypto.keyring import generate_signing_key; open('$SECRETS_DIR/synapse.signing.key', 'w').write(generate_signing_key('a_' + '$SERVER_NAME'))" 2>/dev/null || \
-    openssl rand -base64 32 > "$SECRETS_DIR/synapse.signing.key"
+    python3 -c "import sys, secrets; from signedjson.key import generate_signing_key, write_signing_keys; write_signing_keys(open(sys.argv[1], 'w'), [generate_signing_key('a_' + secrets.token_hex(2))])" "$SECRETS_DIR/synapse.signing.key"
 fi
 
 # Secret Macaroon Synapse
@@ -137,12 +137,6 @@ if [ "$ENABLE_MAS" = "true" ]; then
     mas-cli config sync --prune --config "$CONFIG_DIR/mas.yaml" || mas-cli database migrate --config "$CONFIG_DIR/mas.yaml" || true
 fi
 
-# Création éventuelle de l'utilisateur initial si défini dans les variables
-if [ -n "$INITIAL_ADMIN_USER" ] && [ -n "$INITIAL_ADMIN_PASSWORD" ]; then
-    echo "  -> Création du compte administrateur initial ($INITIAL_ADMIN_USER)..."
-    mas-cli manage register-user --yes --admin "$INITIAL_ADMIN_USER" --config "$CONFIG_DIR/mas.yaml" || true
-    mas-cli manage set-password --yes --password "$INITIAL_ADMIN_PASSWORD" "$INITIAL_ADMIN_USER" --config "$CONFIG_DIR/mas.yaml" || true
-fi
 
 # Arrêt de PostgreSQL temporaire avant passage de relais à Supervisor
 if [ "$ENABLE_INTERNAL_POSTGRES" = "true" ]; then
@@ -161,5 +155,17 @@ echo " Admin Console  : $PUBLIC_BASEURL/admin/"
 echo " Matrix Endpoint: $PUBLIC_BASEURL/_matrix/"
 echo " MAS Endpoint   : $PUBLIC_BASEURL/auth/"
 echo "=================================================================="
+
+# Création éventuelle de l'utilisateur initial si défini dans les variables.
+# MAS interroge Synapse lors de l'enregistrement : on attend donc que Synapse
+# soit démarré par Supervisor, en arrière-plan.
+if [ -n "$INITIAL_ADMIN_USER" ] && [ -n "$INITIAL_ADMIN_PASSWORD" ] && [ ! -f "$SECRETS_DIR/.initial_admin_created" ]; then
+    (
+        until curl -fs http://127.0.0.1:8008/health > /dev/null; do sleep 5; done
+        echo "  -> Création du compte administrateur initial ($INITIAL_ADMIN_USER)..."
+        mas-cli manage register-user --yes --admin --password "$INITIAL_ADMIN_PASSWORD" "$INITIAL_ADMIN_USER" --config "$CONFIG_DIR/mas.yaml" \
+            && touch "$SECRETS_DIR/.initial_admin_created"
+    ) &
+fi
 
 exec "$@"

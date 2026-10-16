@@ -7,7 +7,6 @@ listeners:
   - port: 8008
     bind_addresses:
       - '127.0.0.1'
-      - '::1'
     type: http
     tls: false
     x_forwarded: true
@@ -44,14 +43,9 @@ matrix_authentication_service:
   endpoint: "http://127.0.0.1:8081"
 
 # Fonctionnalités expérimentales pour Matrix 2.0 / Element Call RTC
+# (msc3861 est remplacé par la section matrix_authentication_service ci-dessus :
+# Synapse refuse de démarrer si les deux sont activés.)
 experimental_features:
-  msc3861:
-    enabled: ${ENABLE_MAS}
-    issuer: "${PUBLIC_BASEURL}/auth/"
-    client_id: "00000000000000000000000000"
-    client_auth_method: "client_secret_basic"
-    client_secret: "${MAS_SYNAPSE_SHARED_SECRET}"
-    admin_token: "${MAS_ADMIN_TOKEN}"
   msc4143_enabled: true
   msc4222_enabled: true
 

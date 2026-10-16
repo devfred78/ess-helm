@@ -184,8 +184,7 @@ Par défaut, l'auto-inscription publique est désactivée par sécurité. Vous p
 
 #### Option B : En ligne de commande non interactive (SSH)
 ```bash
-docker exec -it ess-community mas-cli manage register-user --yes --admin alice --config /data/config/mas.yaml
-docker exec -it ess-community mas-cli manage set-password --yes --password "MotDePasseAlice123!" alice --config /data/config/mas.yaml
+docker exec -it ess-community mas-cli manage register-user --yes --admin --password "MotDePasseAlice123!" alice --config /data/config/mas.yaml
 ```
 
 ---
@@ -214,3 +213,74 @@ Toutes les données vitales se trouvant dans `/volume1/docker/element`, la sauve
 
 2. **Restauration** :
    - Restaurez le dossier `docker/element` sur n'importe quel Synology ou serveur Docker et relancez le conteneur : votre serveur redémarre exactement à l'état sauvegardé sans perte de données.
+
+---
+
+### Mise à jour du conteneur déjà déployé
+
+Toutes les données étant stockées dans `/volume1/docker/element`, mettre à jour revient à remplacer l'image du conteneur : les comptes, salons, messages, médias et clés sont conservés. Au redémarrage, l'entrypoint régénère les fichiers de `config/` à partir des templates de la nouvelle image et applique les migrations de base de données de Synapse et de MAS.
+
+> **Important :** les migrations de base de données ne sont pas réversibles. Faites une sauvegarde du dossier `docker/element` (voir la section précédente) **avant** chaque mise à jour, conteneur arrêté, pour pouvoir revenir à l'ancienne version en cas de problème.
+
+#### Étape 1 : Télécharger la nouvelle image
+
+Comme pour l'installation, l'application Docker de DSM 7.1 ne sait pas télécharger l'image depuis GHCR : connectez-vous au NAS en SSH et exécutez :
+
+```bash
+# Conserve l'image actuelle sous l'étiquette "previous" pour pouvoir revenir en arrière
+sudo docker tag ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest \
+                ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:previous
+
+sudo docker pull ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest
+```
+
+Si le package est privé, un `sudo docker login ghcr.io -u <votre-utilisateur>` préalable peut être nécessaire. Sans accès SSH, utilisez l'alternative hors ligne décrite à l'[Étape 1 de la Méthode 1](#étape-1--téléchargement-de-limage) (`docker save` puis **Ajouter à partir d'un fichier**).
+
+Le téléchargement remplace l'étiquette `latest` mais ne modifie pas le conteneur en cours d'exécution : il continue d'utiliser l'ancienne image tant qu'il n'a pas été recréé.
+
+#### Étape 2 : Recréer le conteneur
+
+**Si le conteneur a été créé avec l'interface graphique (Méthode 1) :**
+
+1. Dans l'application **Docker** de DSM, onglet **Conteneur**, sélectionnez `ess-community` et cliquez sur **Arrêter**.
+2. Toujours sur `ess-community`, cliquez sur **Action** > **Effacer** (*Clear*). DSM recrée le conteneur à partir de la nouvelle image `latest` en conservant ses paramètres : volume `/data`, ports, variables d'environnement et redémarrage automatique.
+3. Cliquez sur **Démarrer**.
+
+> **Variables d'environnement :** le conteneur garde les variables enregistrées lors de sa création ; les nouvelles valeurs par défaut de l'image ne sont pas reprises. Si la nouvelle image change de version de Synapse, mettez à jour la variable `SYNAPSE_VERSION_STRING` (conteneur arrêté : **Modifier** > **Paramètres avancés** > **Environnement**) : elle ne sert qu'à l'affichage de la version, mais gardera sinon l'ancienne valeur.
+
+Si l'action **Effacer** n'est pas disponible, supprimez le conteneur (conteneur arrêté : **Action** > **Supprimer**) puis recréez-le en suivant l'[Étape 2 de la Méthode 1](#étape-2--création-du-conteneur) avec exactement les mêmes paramètres, en particulier le même dossier `docker/element` monté sur `/data`. Supprimer le conteneur n'efface pas ce dossier.
+
+**Si le conteneur a été créé avec Docker Compose (Méthode 2) :**
+
+```bash
+cd /volume1/docker/element
+sudo docker-compose pull
+sudo docker-compose up -d
+```
+
+`docker-compose up -d` recrée automatiquement le conteneur s'il utilise une image plus récente.
+
+#### Étape 3 : Vérifier le redémarrage
+
+1. Dans l'application **Docker**, onglet **Conteneur** > `ess-community` > **Détails** > **Journal**, vérifiez que les quatre services (`postgresql`, `synapse`, `mas`, `caddy`) passent à l'état `RUNNING` et ne redémarrent pas en boucle (lignes `exited: … (exit status 1; not expected)` répétées). Le premier démarrage après une mise à jour peut prendre un peu plus longtemps à cause des migrations.
+2. Ouvrez `https://matrix.votredomaine.fr/_matrix/client/versions` : la page doit afficher une réponse JSON.
+3. Connectez-vous à Element Web avec un compte existant.
+
+En cas d'échec, revenez à la version précédente :
+
+1. Arrêtez le conteneur et restaurez la sauvegarde du dossier `docker/element` (indispensable : la base de données a pu être migrée vers un schéma que l'ancienne version ne comprend pas).
+2. Remettez l'ancienne image sous l'étiquette `latest`, puis recréez le conteneur comme à l'étape 2 :
+   ```bash
+   sudo docker tag ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:previous \
+                   ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest
+   ```
+   Avec Docker Compose, lancez uniquement `sudo docker-compose up -d`, sans `pull`.
+
+#### Étape 4 (facultative) : Libérer l'espace disque
+
+Les anciennes images restent stockées sur le NAS. Une fois la nouvelle version validée, supprimez-les depuis l'onglet **Image** de l'application Docker (image `ess-synology:previous` et images sans étiquette, marquées `<none>`) ou en SSH :
+
+```bash
+sudo docker rmi ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:previous
+sudo docker image prune
+```
