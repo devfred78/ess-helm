@@ -13,7 +13,9 @@ Le conteneur regroupe de manière optimisée et autonome tous les composants né
 - **Element Web** : Le client web officiel Matrix préconfiguré.
 - **Element Admin** : La console web d'administration de votre serveur.
 - **PostgreSQL 16** : Base de données relationnelle haute performance préconfigurée en interne.
-- **Caddy (Reverse proxy interne)** : Aiguille automatiquement les requêtes (`/_matrix`, `/_synapse`, `/auth`, `/admin`, `/` et `.well-known`).
+- **LiveKit SFU** et **MatrixRTC Authorisation Service** (`lk-jwt-service`) : le backend des appels audio/vidéo **Element Call** (appels 1:1 et de groupe dans Element Web et Element X, salons vidéo).
+- **coturn** : serveur TURN utilisé par les appels 1:1 « historiques » des applications Element classiques (Element Android / iOS).
+- **Caddy (Reverse proxy interne)** : Aiguille automatiquement les requêtes (`/_matrix`, `/_synapse`, `/auth`, `/admin`, `/livekit`, `/` et `.well-known`).
 - **Supervisor** : Gestionnaire de processus robuste assurant la persistance et le redémarrage des services.
 
 Toutes les données, configurations, bases de données, clés de chiffrement et médias sont stockés de façon persistante dans un unique dossier `/data` sur votre NAS.
@@ -34,8 +36,19 @@ Toutes les données, configurations, bases de données, clés de chiffrement et 
    - Disposez d'un nom de domaine ou sous-domaine (ex: `matrix.votredomaine.fr` ou votre DDNS Synology `votrenas.synology.me`).
    - Les enregistrements DNS (A / CNAME) doivent pointer vers l'adresse IP publique de votre box/routeur.
 
-4. **Redirection de ports sur votre box / routeur** :
-   - Redirigez les ports **TCP 80** et **TCP 443** vers l'adresse IP locale de votre NAS Synology.
+4. **Redirection de ports sur votre box / routeur** : redirigez les ports suivants vers l'adresse IP locale de votre NAS Synology (même numéro de port côté box et côté NAS) :
+
+   | Port(s) | Protocole | Usage | Obligatoire |
+   |---|---|---|---|
+   | 80, 443 | TCP | Accès web HTTPS et certificat Let's Encrypt | Oui |
+   | 7881 | TCP | Appels Element Call (flux audio/vidéo, repli TCP) | Pour les appels |
+   | 7882 | UDP | Appels Element Call (flux audio/vidéo) | Pour les appels |
+   | 3478 | UDP **et** TCP | Serveur TURN (appels 1:1 des applications Element classiques) | Recommandé |
+   | 49160-49169 | UDP | Serveur TURN : ports de relais | Recommandé |
+
+   > Les ports d'appel ne passent **pas** par le proxy inversé de DSM : ce sont des flux directs, qui doivent arriver tels quels jusqu'au conteneur. Sans eux, la connexion et les messages fonctionnent, mais les appels restent sans son ni image.
+
+   Si votre box le permet, attribuez aussi au NAS une **adresse IP locale fixe** (bail DHCP statique), sans quoi les redirections cesseront de fonctionner le jour où son adresse change.
 
 5. **Certificat SSL Let's Encrypt dans DSM** :
    - Dans DSM, allez dans **Panneau de configuration** > **Sécurité** > **Certificat**.
@@ -94,13 +107,28 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
      - `INITIAL_ADMIN_USER` : `admin` (nom du compte administrateur initial)
      - `INITIAL_ADMIN_PASSWORD` : `UnMotDePasseTresSecurise!`
      - `TZ` : `Europe/Paris`
+   - Facultatif, pour les appels audio/vidéo (voir [Appels audio et vidéo](#appels-audio-et-vidéo-element-call-et-turn)) :
+     - `PUBLIC_IP` : l'adresse IP publique de votre box. À laisser vide dans un premier temps : elle est détectée automatiquement. Renseignez-la seulement si les appels se connectent mais restent sans son ni image.
+     - `ENABLE_MATRIX_RTC` et `ENABLE_TURN` sont pré-remplies à `true`. Passez-les à `false` pour désactiver respectivement Element Call ou le serveur TURN.
    - Laissez les autres variables pré-remplies (héritées de l'image) telles quelles.
    - Si DSM refuse d'enregistrer parce qu'une variable est vide (cas de `SYNAPSE_VERSION_STRING` sur les images antérieures à ce correctif), renseignez-y la version de Synapse, par exemple `1.162.0` : cette valeur sert uniquement à l'affichage de la version du serveur.
    - Cliquez sur **Sauvegarder**, puis sur **Suivant**
 
-5. **Paramètres des port** :
-   - Pour le port du conteneur `8080`, indiquez le Port local : `8080` (ou un port libre de votre choix).
-   - Laissez le reste tel quel.
+5. **Paramètres des port** : DSM pré-remplit une ligne par port déclaré par l'image. Pour chacune, indiquez le **Port local** comme suit :
+
+   | Port du conteneur | Type | Port local |
+   |---|---|---|
+   | 8080 | TCP | `8080` (ou un port libre de votre choix, à reporter dans le proxy inversé) |
+   | 8448 | TCP | laissez `Auto` (inutilisé) |
+   | 7881 | TCP | `7881` |
+   | 7882 | UDP | `7882` |
+   | 3478 | TCP | `3478` |
+   | 3478 | UDP | `3478` |
+   | 49160 à 49169 | UDP | le **même numéro** que le port du conteneur (`49160`, `49161`… `49169`) |
+
+   - Hormis 8080, les ports locaux doivent être **identiques** aux ports du conteneur : les clients se connectent directement au numéro de port annoncé par le serveur. Ne laissez pas `Auto`, qui attribuerait un port au hasard.
+   - Si une ligne manque, ajoutez-la avec le bouton **+** en choisissant le bon type (TCP/UDP).
+   - Si le TURN est désactivé (`ENABLE_TURN=false`), vous pouvez supprimer les lignes 3478 et 49160-49169.
    - Cliquez sur **Suivant**
 
 6. **Paramètres de volume** :
@@ -121,7 +149,7 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
 Si vous préférez déployer en ligne de commande ou via le planificateur de tâches de DSM :
 
 1. Déposez le fichier `docker-compose.yml` dans `/volume1/docker/element/docker-compose.yml`.
-2. Modifiez les variables `SERVER_NAME` et `PUBLIC_BASEURL` avec votre nom de domaine.
+2. Modifiez les variables `SERVER_NAME` et `PUBLIC_BASEURL` avec votre nom de domaine. Les ports d'appel (7881, 7882, 3478, 49160-49169) y sont déjà publiés : il reste à les rediriger sur la box (voir les prérequis).
    Vérifiez également la ligne `image:` : sans variable `GITHUB_REPOSITORY` définie, elle pointe vers `ghcr.io/element-hq/ess-helm/ess-synology:latest`. Remplacez-la par le chemin de votre image (ex : `ghcr.io/devfred78/ess-helm/ess-synology:latest`) ou lancez la commande avec `GITHUB_REPOSITORY=<utilisateur>/<dépôt>` en préfixe.
 3. Exécutez la commande suivante en SSH (ou via une tâche utilisateur déclenchée dans DSM) :
    ```bash
@@ -158,6 +186,55 @@ Pour que votre serveur soit accessible de manière sécurisée en HTTPS avec Let
    - Cliquez sur **Paramètres**.
    - Repérez la ligne correspondant à votre proxy inversé `matrix.votredomaine.fr` et assignez-lui votre certificat Let's Encrypt.
    - Cliquez sur **OK**.
+
+---
+
+### Appels audio et vidéo (Element Call et TURN)
+
+Le conteneur fournit tout ce qu'il faut pour les appels. Aucun service supplémentaire n'est à installer : il suffit d'ouvrir les ports.
+
+#### Comment ça fonctionne
+
+- **Element Call (MatrixRTC)** : c'est le système d'appel d'Element Web et d'Element X, pour les appels 1:1 comme pour les appels de groupe et les salons vidéo. Les clients découvrent automatiquement le service via `https://matrix.votredomaine.fr/.well-known/matrix/client`. Ils obtiennent ensuite un jeton auprès du *MatrixRTC Authorisation Service* (`/livekit/jwt`), puis se connectent au SFU LiveKit : la signalisation passe en WebSocket par `/livekit/sfu` (via le proxy inversé de DSM), et les flux audio/vidéo directement sur les ports **7881/TCP** et **7882/UDP**.
+- **TURN (coturn)** : les applications Element « classiques » (Element Android / iOS, hors Element X) passent encore par des appels 1:1 historiques en pair à pair. Synapse leur fournit l'adresse du serveur TURN intégré et des identifiants temporaires. Le TURN relaie alors l'audio/vidéo quand les deux appareils ne peuvent pas se joindre directement (ports **3478** et **49160-49169/UDP**).
+
+Tous les secrets nécessaires (clé LiveKit, jetons de l'application service, secret TURN) sont générés au premier démarrage dans `docker/element/secrets/`.
+
+#### Étape 1 : Ouvrir les ports
+
+1. **Sur la box** : vérifiez les redirections de ports listées dans les [prérequis](#prérequis-sur-votre-synology-nas) (7881/TCP, 7882/UDP, 3478/UDP+TCP, 49160-49169/UDP).
+2. **Dans Docker** : vérifiez que ces ports sont publiés avec des ports locaux identiques (étape 2.5 de la Méthode 1, ou `docker-compose.yml` de la Méthode 2).
+3. **Dans le pare-feu de DSM** (seulement s'il est activé : **Panneau de configuration** > **Sécurité** > **Pare-feu**) :
+   - Cliquez sur **Modifier les règles** pour le profil actif, puis sur **Créer**.
+   - **Ports** : **Personnalisé**, puis **Personnaliser** : Type **Port de destination**, Protocole **TCP**, ports `7881,3478`.
+   - **IP source** : **Toutes**. **Action** : **Autoriser**. Validez.
+   - Créez une seconde règle identique avec le Protocole **UDP** et les ports `7882,3478,49160-49169`.
+   - Placez ces règles **au-dessus** d'une éventuelle règle « Refuser tout », puis cliquez sur **OK**.
+
+#### Étape 2 : Vérifier le fonctionnement
+
+1. Dans l'application **Docker** de DSM, **Conteneur** > `ess-community` > **Détails** > **Journal** :
+   - le bandeau de démarrage affiche les lignes `MatrixRTC` et `TURN (coturn)` ;
+   - la ligne `IP publique annoncée par coturn : …` doit montrer l'adresse IP publique de votre box. Un message `ATTENTION : IP publique introuvable` signifie qu'il faut renseigner la variable `PUBLIC_IP` ;
+   - les services `livekit`, `lk-jwt-service` et `coturn` doivent passer à l'état `RUNNING` sans redémarrer en boucle.
+2. Depuis un navigateur :
+   - `https://matrix.votredomaine.fr/.well-known/matrix/client` doit contenir `org.matrix.msc4143.rtc_foci` ;
+   - `https://matrix.votredomaine.fr/livekit/jwt/healthz` doit répondre sans erreur (code 200) ;
+   - `https://matrix.votredomaine.fr/livekit/sfu/` doit afficher `OK`.
+3. Dans Element Web, rechargez complètement la page (**Ctrl + F5**) pour prendre en compte la nouvelle configuration. Lancez ensuite un appel vers un autre compte, idéalement depuis un smartphone **en 4G/5G** (hors de votre réseau Wi-Fi), pour tester le chemin réel depuis Internet.
+
+#### Dépannage
+
+- **Le message « Call failed due to misconfigured server » / « configurer un serveur TURN » apparaît encore** :
+  - dans Element Web, rechargez la page (**Ctrl + F5**) : les appels doivent désormais passer par Element Call ;
+  - depuis une application Element classique, vérifiez les ports TURN (3478 et 49160-49169) et la ligne `IP publique annoncée par coturn` du journal.
+- **L'appel se connecte mais reste sans son ni image** : les flux audio/vidéo n'atteignent pas le conteneur.
+  - Vérifiez les redirections 7881/TCP et 7882/UDP sur la box, dans Docker et dans le pare-feu DSM.
+  - Renseignez la variable `PUBLIC_IP` avec l'IP publique de votre box (consultable sur l'interface de la box ou sur un site comme `ifconfig.me`), puis redémarrez le conteneur.
+- **Les appels marchent en 4G mais pas depuis le Wi-Fi de la maison** (ou l'inverse) : depuis le réseau local, les appareils joignent le NAS par l'IP publique. La box doit donc savoir renvoyer ce trafic vers le réseau local (fonction *NAT loopback* / *hairpinning*, généralement active sur les box françaises). Consultez la documentation de votre box.
+- **Votre IP publique change régulièrement** : LiveKit et coturn détectent l'IP publique au démarrage. Après un changement d'IP, redémarrez le conteneur. Une IP fixe, si votre fournisseur en propose, évite ce problème.
+- **IP publique partagée (CGNAT)** : si l'IP « WAN » affichée par la box commence par `100.64.` à `100.127.`, ou si la box n'autorise qu'une plage de ports restreinte (IPv4 partagée), les redirections ne peuvent pas fonctionner. Demandez à votre fournisseur une IPv4 publique dédiée (certains l'attribuent gratuitement, sur simple demande depuis l'espace abonné).
+- **Désactiver une fonctionnalité** : passez `ENABLE_MATRIX_RTC` ou `ENABLE_TURN` à `false` dans les variables d'environnement du conteneur (conteneur arrêté : **Modifier** > **Paramètres avancés** > **Environnement**), puis redémarrez-le. Avec `ENABLE_MATRIX_RTC=false`, Element Web revient aux appels historiques.
 
 ---
 
@@ -214,7 +291,7 @@ Toutes les données vitales se trouvant dans `/volume1/docker/element`, la sauve
    - Utilisez **Hyper Backup** ou **Snapshot Replication** sur DSM pour sauvegarder le dossier `docker/element`.
    - Cela sauvegarde l'ensemble :
      - `config/` : Fichiers de configuration générés.
-     - `secrets/` : Clés privées de signature Synapse, RSA/ECDSA pour MAS et tokens.
+     - `secrets/` : Clés privées de signature Synapse, RSA/ECDSA pour MAS, secrets LiveKit et TURN, et tokens.
      - `postgres/` : Bases de données PostgreSQL complètes (comptes, salons, messages chiffrés).
      - `media/` : Photos, fichiers et pièces jointes partagés.
 
@@ -255,6 +332,8 @@ Le téléchargement remplace l'étiquette `latest` mais ne modifie pas le conten
 
 > **Variables d'environnement :** le conteneur garde les variables enregistrées lors de sa création ; les nouvelles valeurs par défaut de l'image ne sont pas reprises. Si la nouvelle image change de version de Synapse, mettez à jour la variable `SYNAPSE_VERSION_STRING` (conteneur arrêté : **Modifier** > **Paramètres avancés** > **Environnement**) : elle ne sert qu'à l'affichage de la version, mais gardera sinon l'ancienne valeur.
 
+> **Première mise à jour vers une image avec les appels audio/vidéo :** **Réinitialiser** conserve les anciens paramètres de ports, qui ne comprennent pas les ports d'appel. Avant de démarrer le conteneur, ouvrez **Modifier** > **Paramètres des ports** et ajoutez les ports 7881/TCP, 7882/UDP, 3478/TCP, 3478/UDP et 49160 à 49169/UDP, avec des ports locaux identiques (voir l'[étape 2.5 de la Méthode 1](#étape-2--création-du-conteneur)). Si DSM ne permet pas de modifier les ports, supprimez puis recréez le conteneur comme indiqué ci-dessous. Pensez aussi aux redirections sur la box et au pare-feu (voir [Appels audio et vidéo](#appels-audio-et-vidéo-element-call-et-turn)).
+
 Si l'action **Réinitialiser** n'est pas disponible, supprimez le conteneur (conteneur arrêté : **Action** > **Supprimer**) puis recréez-le en suivant l'[Étape 2 de la Méthode 1](#étape-2--création-du-conteneur) avec exactement les mêmes paramètres, en particulier le même dossier `docker/element` monté sur `/data`. Supprimer le conteneur n'efface pas ce dossier.
 
 **Si le conteneur a été créé avec Docker Compose (Méthode 2) :**
@@ -265,11 +344,11 @@ sudo docker-compose pull
 sudo docker-compose up -d
 ```
 
-`docker-compose up -d` recrée automatiquement le conteneur s'il utilise une image plus récente.
+`docker-compose up -d` recrée automatiquement le conteneur s'il utilise une image plus récente. Si votre `docker-compose.yml` date d'avant l'ajout des appels audio/vidéo, remplacez-le d'abord par la nouvelle version (ports 7881, 7882, 3478 et 49160-49169), en y reportant vos valeurs.
 
 #### Étape 3 : Vérifier le redémarrage
 
-1. Dans l'application **Docker**, onglet **Conteneur** > `ess-community` > **Détails** > **Journal**, vérifiez que les quatre services (`postgresql`, `synapse`, `mas`, `caddy`) passent à l'état `RUNNING` et ne redémarrent pas en boucle (lignes `exited: … (exit status 1; not expected)` répétées). Le premier démarrage après une mise à jour peut prendre un peu plus longtemps à cause des migrations.
+1. Dans l'application **Docker**, onglet **Conteneur** > `ess-community` > **Détails** > **Journal**, vérifiez que les services (`postgresql`, `synapse`, `mas`, `caddy`, ainsi que `livekit`, `lk-jwt-service` et `coturn` si les appels sont activés) passent à l'état `RUNNING` et ne redémarrent pas en boucle (lignes `exited: … (exit status 1; not expected)` répétées). Le premier démarrage après une mise à jour peut prendre un peu plus longtemps à cause des migrations.
 2. Ouvrez `https://matrix.votredomaine.fr/_matrix/client/versions` : la page doit afficher une réponse JSON.
 3. Connectez-vous à Element Web avec un compte existant.
 

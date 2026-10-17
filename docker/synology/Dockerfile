@@ -9,6 +9,9 @@ ARG SYNAPSE_VERSION=1.162.0
 FROM oci.element.io/matrix-authentication-service:1.26.0 AS mas-src
 FROM oci.element.io/element-web:v1.12.30 AS element-web-src
 FROM oci.element.io/element-admin:0.1.15 AS element-admin-src
+# MatrixRTC (Element Call) : SFU LiveKit et MatrixRTC Authorisation Service
+FROM docker.io/livekit/livekit-server:v1.13.9 AS livekit-src
+FROM oci.element.io/lk-jwt-service:0.8.0 AS lk-jwt-service-src
 
 # Stage 2: Image finale basée sur Synapse officiel
 FROM oci.element.io/synapse:v${SYNAPSE_VERSION}
@@ -31,9 +34,11 @@ ENV SYNAPSE_VERSION_STRING=${SYNAPSE_VERSION} \
     ENABLE_INTERNAL_POSTGRES=true \
     ENABLE_ELEMENT_WEB=true \
     ENABLE_ELEMENT_ADMIN=true \
-    ENABLE_MAS=true
+    ENABLE_MAS=true \
+    ENABLE_MATRIX_RTC=true \
+    ENABLE_TURN=true
 
-# Installation des dépendances (PostgreSQL, Caddy, Supervisor, OpenSSL, curl, jq)
+# Installation des dépendances (PostgreSQL, Caddy, coturn, Supervisor, OpenSSL, curl, jq)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
@@ -46,6 +51,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get update && apt-get install -y --no-install-recommends \
     postgresql-16 \
     postgresql-client-16 \
+    coturn \
     supervisor \
     gettext-base \
     debian-keyring \
@@ -68,6 +74,10 @@ COPY --from=mas-src /usr/local/share/mas-cli /usr/local/share/mas-cli
 COPY --from=element-web-src /app /var/www/element-web
 COPY --from=element-admin-src /dist /var/www/element-admin
 
+# Copie des binaires statiques MatrixRTC (LiveKit SFU et lk-jwt-service)
+COPY --from=livekit-src /livekit-server /usr/local/bin/livekit-server
+COPY --from=lk-jwt-service-src /lk-jwt-service /usr/local/bin/lk-jwt-service
+
 # Création des répertoires de données et templates
 RUN mkdir -p /data /templates /var/log/supervisor /var/run/postgresql \
     && chown -R postgres:postgres /var/run/postgresql
@@ -78,6 +88,11 @@ COPY Caddyfile /templates/Caddyfile.template
 COPY homeserver.yaml.template /templates/homeserver.yaml.template
 COPY mas.yaml.template /templates/mas.yaml.template
 COPY element-config.json.template /templates/element-config.json.template
+COPY homeserver-matrix-rtc.yaml.template /templates/homeserver-matrix-rtc.yaml.template
+COPY homeserver-turn.yaml.template /templates/homeserver-turn.yaml.template
+COPY matrix-rtc-registration.yaml.template /templates/matrix-rtc-registration.yaml.template
+COPY livekit.yaml.template /templates/livekit.yaml.template
+COPY turnserver.conf.template /templates/turnserver.conf.template
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY register-user.sh /usr/local/bin/register-user
 
@@ -86,7 +101,9 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/register-user
 # Exposition des ports :
 # 8080 : Port HTTP principal (Reverse proxy Caddy vers Synapse, MAS, Element Web/Admin)
 # 8448 : Port Matrix Federation (optionnel)
-EXPOSE 8080 8448
+# 7881/tcp, 7882/udp : Flux audio/vidéo MatrixRTC (LiveKit SFU)
+# 3478/udp+tcp, 49160-49169/udp : Serveur TURN coturn (appels 1:1 historiques)
+EXPOSE 8080 8448 7881/tcp 7882/udp 3478/tcp 3478/udp 49160-49169/udp
 
 VOLUME ["/data"]
 

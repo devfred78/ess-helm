@@ -1,0 +1,18 @@
+# Enregistrement application service du MatrixRTC Authorisation Service (lk-jwt-service)
+id: matrix-rtc-authorisation-service
+as_token: "${MATRIX_RTC_AS_TOKEN}"
+hs_token: "${MATRIX_RTC_HS_TOKEN}"
+sender_localpart: _lk_jwt_service
+# Le service agit au nom des utilisateurs locaux (ex : événements de départ différés MSC4140)
+namespaces:
+  users:
+    - exclusive: false
+      regex: "@.*:${SERVER_NAME}"
+# Le service ne reçoit aucun événement
+url: null
+# MSC4502 : vérification des appartenances aux salons sans les rejoindre
+io.element.msc4502.scopes:
+  - "urn:matrix:client:io.element.msc4502:rooms:is_joined"
+# MSC4512 : Synapse relaie les endpoints rtc/livekit des API C-S et S-S vers le service
+io.element.msc4512.proxy_prefix: rtc/livekit
+io.element.msc4512.proxy_url: "http://127.0.0.1:8082"

@@ -1,0 +1,11 @@
+
+# ==============================================================================
+# Serveur TURN (coturn) pour les appels 1:1 historiques : ajouté par l'entrypoint
+# si ENABLE_TURN=true
+# ==============================================================================
+turn_uris:
+  - "turn:${SERVER_NAME}:3478?transport=udp"
+  - "turn:${SERVER_NAME}:3478?transport=tcp"
+turn_shared_secret: "${TURN_SHARED_SECRET}"
+turn_user_lifetime: 1h
+turn_allow_guests: false

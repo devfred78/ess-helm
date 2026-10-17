@@ -25,6 +25,22 @@ export PUBLIC_BASEURL=${PUBLIC_BASEURL:-http://localhost:8080}
 export ENABLE_INTERNAL_POSTGRES=${ENABLE_INTERNAL_POSTGRES:-true}
 export ENABLE_MAS=${ENABLE_MAS:-true}
 
+# Appels audio/vidéo : MatrixRTC (Element Call, LiveKit) et TURN (appels 1:1 historiques).
+# Les valeurs sont normalisées en true/false car Supervisor les utilise pour autostart.
+normalize_bool() {
+    case "${1,,}" in
+        true|yes|on|1) echo true ;;
+        *) echo false ;;
+    esac
+}
+export ENABLE_MATRIX_RTC=$(normalize_bool "${ENABLE_MATRIX_RTC:-true}")
+export ENABLE_TURN=$(normalize_bool "${ENABLE_TURN:-true}")
+export TURN_MIN_PORT=${TURN_MIN_PORT:-49160}
+export TURN_MAX_PORT=${TURN_MAX_PORT:-49169}
+export LIVEKIT_KEY=matrix-rtc
+# IP publique de la box (facultative : détectée automatiquement sinon)
+export PUBLIC_IP=${PUBLIC_IP:-}
+
 export POSTGRES_USER=${POSTGRES_USER:-synapse}
 export POSTGRES_PORT=${POSTGRES_PORT:-5432}
 export POSTGRES_HOST=${POSTGRES_HOST:-127.0.0.1}
@@ -93,6 +109,30 @@ if [ ! -f "$SECRETS_DIR/mas_admin_token" ]; then
 fi
 export MAS_ADMIN_TOKEN=$(cat "$SECRETS_DIR/mas_admin_token")
 
+# Secret partagé LiveKit SFU <-> MatrixRTC Authorisation Service (sans retour à la ligne :
+# lk-jwt-service le lit tel quel depuis le fichier)
+if [ ! -f "$SECRETS_DIR/livekit_secret" ]; then
+    openssl rand -hex 32 | tr -d '\n' > "$SECRETS_DIR/livekit_secret"
+fi
+export LIVEKIT_SECRET=$(cat "$SECRETS_DIR/livekit_secret")
+
+# Jetons de l'application service MatrixRTC Authorisation Service
+if [ ! -f "$SECRETS_DIR/matrix_rtc_as_token" ]; then
+    openssl rand -hex 32 > "$SECRETS_DIR/matrix_rtc_as_token"
+fi
+export MATRIX_RTC_AS_TOKEN=$(cat "$SECRETS_DIR/matrix_rtc_as_token")
+
+if [ ! -f "$SECRETS_DIR/matrix_rtc_hs_token" ]; then
+    openssl rand -hex 32 > "$SECRETS_DIR/matrix_rtc_hs_token"
+fi
+export MATRIX_RTC_HS_TOKEN=$(cat "$SECRETS_DIR/matrix_rtc_hs_token")
+
+# Secret partagé Synapse <-> coturn
+if [ ! -f "$SECRETS_DIR/turn_shared_secret" ]; then
+    openssl rand -hex 32 > "$SECRETS_DIR/turn_shared_secret"
+fi
+export TURN_SHARED_SECRET=$(cat "$SECRETS_DIR/turn_shared_secret")
+
 # ==============================================================================
 # Initialisation de la base de données PostgreSQL interne
 # ==============================================================================
@@ -122,7 +162,68 @@ fi
 # ==============================================================================
 echo "[3/4] Génération des fichiers de configuration..."
 
+export CONFIG_DIR
+
+# Indique si une adresse IPv4 est privée (non joignable depuis Internet)
+is_private_ipv4() {
+    case "$1" in
+        10.*|127.*|169.254.*|192.168.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|100.6[4-9].*|100.[7-9][0-9].*|100.1[0-1][0-9].*|100.12[0-7].*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+# MatrixRTC : sans PUBLIC_IP, LiveKit découvre lui-même l'IP publique par STUN
+if [ -n "$PUBLIC_IP" ]; then
+    export LIVEKIT_USE_EXTERNAL_IP=false
+else
+    export LIVEKIT_USE_EXTERNAL_IP=true
+fi
+
+if [ "$ENABLE_MATRIX_RTC" = "true" ]; then
+    echo "  -> MatrixRTC (Element Call) activé"
+    export LIVEKIT_PUBLIC_URL="wss://${PUBLIC_BASEURL#*://}/livekit/sfu"
+    export WELL_KNOWN_RTC_FOCI=", \"org.matrix.msc4143.rtc_foci\": [{\"type\": \"livekit\", \"livekit_service_url\": \"${PUBLIC_BASEURL}/livekit/jwt\"}]"
+    export ELEMENT_CALL_USE_EXCLUSIVELY=true
+    envsubst < /templates/livekit.yaml.template > "$CONFIG_DIR/livekit.yaml"
+    envsubst < /templates/matrix-rtc-registration.yaml.template > "$CONFIG_DIR/matrix-rtc-registration.yaml"
+else
+    export LIVEKIT_PUBLIC_URL=""
+    export WELL_KNOWN_RTC_FOCI=""
+    export ELEMENT_CALL_USE_EXCLUSIVELY=false
+fi
+
 envsubst < /templates/homeserver.yaml.template > "$CONFIG_DIR/homeserver.yaml"
+if [ "$ENABLE_MATRIX_RTC" = "true" ]; then
+    envsubst < /templates/homeserver-matrix-rtc.yaml.template >> "$CONFIG_DIR/homeserver.yaml"
+fi
+
+if [ "$ENABLE_TURN" = "true" ]; then
+    echo "  -> Serveur TURN (coturn) activé"
+    envsubst < /templates/homeserver-turn.yaml.template >> "$CONFIG_DIR/homeserver.yaml"
+    envsubst < /templates/turnserver.conf.template > "$CONFIG_DIR/turnserver.conf"
+
+    # Le conteneur est derrière le NAT de Docker et de la box : coturn doit annoncer
+    # l'IP publique (PUBLIC_IP, ou à défaut celle vers laquelle pointe SERVER_NAME)
+    CONTAINER_IP=$(hostname -i | awk '{print $1}')
+    TURN_PUBLIC_IP="$PUBLIC_IP"
+    if [ -z "$TURN_PUBLIC_IP" ]; then
+        TURN_PUBLIC_IP=$(getent ahostsv4 "$SERVER_NAME" | awk 'NR==1 {print $1}')
+        if [ -n "$TURN_PUBLIC_IP" ] && is_private_ipv4 "$TURN_PUBLIC_IP"; then
+            TURN_PUBLIC_IP=""
+        fi
+    fi
+    if [ -n "$TURN_PUBLIC_IP" ] && [ -n "$CONTAINER_IP" ]; then
+        echo "     IP publique annoncée par coturn : $TURN_PUBLIC_IP (IP du conteneur : $CONTAINER_IP)"
+        echo "external-ip=$TURN_PUBLIC_IP/$CONTAINER_IP" >> "$CONFIG_DIR/turnserver.conf"
+    else
+        echo "     ATTENTION : IP publique introuvable pour coturn. Renseignez la variable PUBLIC_IP."
+    fi
+    # Autorise le relais TURN -> TURN (deux participants passant tous deux par le relais)
+    if [ -n "$CONTAINER_IP" ]; then
+        echo "allowed-peer-ip=$CONTAINER_IP" >> "$CONFIG_DIR/turnserver.conf"
+    fi
+fi
+
 envsubst < /templates/mas.yaml.template > "$CONFIG_DIR/mas.yaml"
 envsubst < /templates/Caddyfile.template > "$CONFIG_DIR/Caddyfile"
 
@@ -154,6 +255,13 @@ echo " Web Client     : $PUBLIC_BASEURL/"
 echo " Admin Console  : $PUBLIC_BASEURL/admin/"
 echo " Matrix Endpoint: $PUBLIC_BASEURL/_matrix/"
 echo " MAS Endpoint   : $PUBLIC_BASEURL/auth/"
+if [ "$ENABLE_MATRIX_RTC" = "true" ]; then
+echo " MatrixRTC      : $PUBLIC_BASEURL/livekit/jwt/ ($LIVEKIT_PUBLIC_URL)"
+echo "                  ports 7881/tcp et 7882/udp"
+fi
+if [ "$ENABLE_TURN" = "true" ]; then
+echo " TURN (coturn)  : ports 3478/udp+tcp et $TURN_MIN_PORT-$TURN_MAX_PORT/udp"
+fi
 echo "=================================================================="
 
 # Création éventuelle de l'utilisateur initial si défini dans les variables.

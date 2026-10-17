@@ -30,7 +30,18 @@
 
     handle /.well-known/matrix/client {
         header Content-Type application/json
-        respond `{"m.homeserver": {"base_url": "${PUBLIC_BASEURL}"}, "org.matrix.msc2965.authentication": {"issuer": "${PUBLIC_BASEURL}/auth/", "account": "${PUBLIC_BASEURL}/auth/account"}}` 200
+        # WELL_KNOWN_RTC_FOCI (calculée par l'entrypoint) déclare le backend MatrixRTC, ou est vide
+        respond `{"m.homeserver": {"base_url": "${PUBLIC_BASEURL}"}, "org.matrix.msc2965.authentication": {"issuer": "${PUBLIC_BASEURL}/auth/", "account": "${PUBLIC_BASEURL}/auth/account"}${WELL_KNOWN_RTC_FOCI}}` 200
+    }
+
+    # MatrixRTC Authorisation Service (lk-jwt-service), publié sous /livekit/jwt
+    handle_path /livekit/jwt/* {
+        reverse_proxy 127.0.0.1:8082
+    }
+
+    # LiveKit SFU (signalisation WebSocket), publié sous /livekit/sfu
+    handle_path /livekit/sfu/* {
+        reverse_proxy 127.0.0.1:7880
     }
 
     # Matrix Authentication Service (MAS), servi sous le préfixe /auth (cf. mas.yaml)

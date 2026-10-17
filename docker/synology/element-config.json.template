@@ -27,6 +27,9 @@
     "feature_video_rooms": true,
     "feature_element_call_video_rooms": true
   },
+  "element_call": {
+    "use_exclusively": ${ELEMENT_CALL_USE_EXCLUSIVELY}
+  },
   "setting_defaults": {
     "breadcrumbs": true,
     "urlPreviewsEnabled": true,

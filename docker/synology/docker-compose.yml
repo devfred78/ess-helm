@@ -11,6 +11,13 @@ services:
       - "8080:8080"
       # Port optionnel pour la fédération Matrix directe (si utilisé)
       # - "8448:8448"
+      # Appels Element Call / MatrixRTC (LiveKit SFU) : à rediriger aussi sur la box
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+      # Serveur TURN coturn (appels 1:1 des applications Element « classiques »)
+      - "3478:3478/tcp"
+      - "3478:3478/udp"
+      - "49160-49169:49160-49169/udp"
     volumes:
       # Montage persistant des données (Synapse, MAS, Postgres, Médias, Clés)
       # Adapter "/volume1/docker/element" selon le volume Synology configuré
@@ -25,6 +32,12 @@ services:
       - ENABLE_ELEMENT_WEB=true
       - ENABLE_ELEMENT_ADMIN=true
       - ENABLE_MAS=true
+      # Appels audio/vidéo : Element Call (MatrixRTC) et serveur TURN
+      - ENABLE_MATRIX_RTC=true
+      - ENABLE_TURN=true
+      # IP publique de votre box (facultatif : détectée automatiquement si vide).
+      # À renseigner si les appels se connectent mais restent sans son ni image.
+      - PUBLIC_IP=${PUBLIC_IP:-}
       # Identifiants du compte administrateur initial (optionnel au premier démarrage)
       - INITIAL_ADMIN_USER=${INITIAL_ADMIN_USER:-admin}
       - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-ChangeMeStrongPass123!}

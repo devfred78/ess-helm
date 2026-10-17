@@ -1,0 +1,24 @@
+
+# ==============================================================================
+# MatrixRTC (Element Call) : ajouté par l'entrypoint si ENABLE_MATRIX_RTC=true
+# ==============================================================================
+app_service_config_files:
+  - "${CONFIG_DIR}/matrix-rtc-registration.yaml"
+
+# Durée maximale de report des événements différés (MSC4140)
+max_event_delay_duration: 24h
+
+rc_message:
+  # Doit couvrir au moins la fréquence de partage des clés E2EE (par rafales)
+  per_second: 0.5
+  burst_count: 30
+
+rc_delayed_event_mgmt:
+  # Doit couvrir au moins la fréquence des battements de cœur (toutes les 5 secondes)
+  per_second: 1
+  burst_count: 20
+
+matrix_rtc:
+  transports:
+    - type: livekit
+      livekit_service_url: "${PUBLIC_BASEURL}/livekit/jwt"

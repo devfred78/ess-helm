@@ -47,8 +47,14 @@ matrix_authentication_service:
 # (msc3861 est remplacé par la section matrix_authentication_service ci-dessus :
 # Synapse refuse de démarrer si les deux sont activés.)
 experimental_features:
+  # MSC4143 : découverte des backends MatrixRTC (LiveKit) via l'API client-serveur
   msc4143_enabled: true
+  # MSC4222 : state_after dans /sync, pour un suivi correct de l'état des salons
   msc4222_enabled: true
+  # MSC4502 : le MatrixRTC Authorisation Service vérifie les appartenances sans rejoindre les salons
+  msc4502_enabled: true
+  # MSC4512 : Synapse relaie les endpoints rtc/livekit vers le MatrixRTC Authorisation Service
+  msc4512_enabled: true
 
 # Sécurité réseau et plage locale
 ip_range_blacklist:
@@ -64,3 +70,6 @@ ip_range_blacklist:
 
 ip_range_whitelist:
   - '127.0.0.1/32'
+
+# Les sections MatrixRTC et TURN sont ajoutées à la suite par l'entrypoint
+# (templates homeserver-matrix-rtc.yaml et homeserver-turn.yaml).

@@ -1,0 +1,31 @@
+# LiveKit SFU (MatrixRTC) Configuration Template for Synology DSM
+# Port de signalisation (WebSocket), joint uniquement via Caddy sous ${PUBLIC_BASEURL}/livekit/sfu
+port: 7880
+
+logging:
+  level: info
+  pion_level: error
+
+# Flux audio/vidéo (WebRTC) : ports à rediriger sur la box et à publier dans Docker
+rtc:
+  tcp_port: 7881
+  # Port UDP unique (multiplexé) : évite d'avoir à publier une plage de ports
+  udp_port: 7882
+  # IP publique découverte par STUN, sauf si PUBLIC_IP est renseignée
+  use_external_ip: ${LIVEKIT_USE_EXTERNAL_IP}
+  node_ip: "${PUBLIC_IP}"
+
+# Le TURN intégré de LiveKit n'est pas utilisé (comme dans le chart Helm)
+turn:
+  enabled: false
+
+keys:
+  ${LIVEKIT_KEY}: "${LIVEKIT_SECRET}"
+
+room:
+  auto_create: false
+
+webhook:
+  api_key: ${LIVEKIT_KEY}
+  urls:
+    - http://127.0.0.1:8082/sfu_webhook
