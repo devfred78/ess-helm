@@ -35,4 +35,8 @@ total-quota=1200
 
 log-file=stdout
 simple-log
+# Journalise les sessions, allocations et permissions (utile au diagnostic des appels).
+# Les lignes "A peer IP 10.x.x.x denied" sont normales : ce sont les adresses privées des
+# appareils (réseau local ou opérateur mobile), que le relais n'a pas à joindre.
+verbose
 pidfile=/var/run/turnserver.pid

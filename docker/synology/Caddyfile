@@ -11,14 +11,17 @@
         level INFO
     }
 
-    # En-têtes CORS et de sécurité
+    # En-têtes CORS et de sécurité, ajoutés seulement s'ils sont absents (préfixe "?").
+    # Synapse, MAS et lk-jwt-service envoient leurs propres en-têtes CORS : les doubler
+    # (ex : "Access-Control-Allow-Origin: *, *") fait rejeter la requête par le navigateur,
+    # ce qui empêche notamment Element Call (dans Element X) d'obtenir son jeton LiveKit.
     header {
-        Access-Control-Allow-Origin *
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "X-Requested-With, Content-Type, Authorization, Date"
-        X-Content-Type-Options nosniff
-        X-Frame-Options SAMEORIGIN
-        Referrer-Policy strict-origin-when-cross-origin
+        ?Access-Control-Allow-Origin *
+        ?Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        ?Access-Control-Allow-Headers "X-Requested-With, Content-Type, Authorization, Date"
+        ?X-Content-Type-Options nosniff
+        ?X-Frame-Options SAMEORIGIN
+        ?Referrer-Policy strict-origin-when-cross-origin
     }
 
     # Matrix Well-Known Delegation

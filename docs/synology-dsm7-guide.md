@@ -228,6 +228,11 @@ Tous les secrets nécessaires (clé LiveKit, jetons de l'application service, se
 - **Le message « Call failed due to misconfigured server » / « configurer un serveur TURN » apparaît encore** :
   - dans Element Web, rechargez la page (**Ctrl + F5**) : les appels doivent désormais passer par Element Call ;
   - depuis une application Element classique, vérifiez les ports TURN (3478 et 49160-49169) et la ligne `IP publique annoncée par coturn` du journal.
+- **Ça sonne, mais après avoir décroché l'appel reste bloqué sur « Connexion en cours »** :
+  - **Avec Element X** (Element Call) : dans le journal, cherchez les requêtes `/livekit/jwt/sfu/get`. Si seules des requêtes `OPTIONS` apparaissent, sans `POST` ni connexion à `/livekit/sfu`, le jeton d'appel n'est jamais obtenu. Cela se produisait avec les images antérieures à ce correctif, à cause d'en-têtes CORS envoyés en double : mettez à jour l'image.
+  - **Avec les applications Element Classic** (appels historiques via TURN) : quand l'un des appareils est en 4G/5G, la connexion directe est presque toujours impossible (les opérateurs mobiles partagent leurs adresses IP), et tout passe par le relais coturn. Vérifiez en priorité la redirection des ports **49160-49169/UDP** (box, Docker, pare-feu DSM) : sans eux, l'appareil s'enregistre bien auprès du TURN, mais aucun son ne transite. Fermez ensuite complètement les applications Element Classic, puis relancez-les : elles ne redemandent les identifiants TURN qu'à leur démarrage.
+  - **Le plus fiable** : utilisez **Element X** sur tous les appareils (Android et iOS). Ses appels passent par le serveur LiveKit, joignable directement, et ne dépendent pas du TURN.
+- **Message `A peer IP 10.x.x.x denied` dans le journal de coturn** : il est normal et sans conséquence. Ce sont des adresses privées (réseau local, ou réseau interne de l'opérateur mobile) que les appareils proposent parmi d'autres, et vers lesquelles le relais refuse volontairement de relayer.
 - **L'appel se connecte mais reste sans son ni image** : les flux audio/vidéo n'atteignent pas le conteneur.
   - Vérifiez les redirections 7881/TCP et 7882/UDP sur la box, dans Docker et dans le pare-feu DSM.
   - Renseignez la variable `PUBLIC_IP` avec l'IP publique de votre box (consultable sur l'interface de la box ou sur un site comme `ifconfig.me`), puis redémarrez le conteneur.
