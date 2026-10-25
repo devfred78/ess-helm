@@ -272,8 +272,38 @@ Par défaut, l'auto-inscription publique est désactivée par sécurité. Vous p
 4. Suivez l'assistant interactif pour saisir le nom d'utilisateur, le mot de passe et définir s'il est administrateur.
 
 #### Option B : En ligne de commande non interactive (SSH)
+
+**Créer un utilisateur :**
 ```bash
 docker exec -it ess-community mas-cli manage register-user --yes --admin --password "MotDePasseAlice123!" alice --config /data/config/mas.yaml
+```
+
+**Lister les utilisateurs enregistrés :**
+
+`mas-cli` ne propose pas de commande de listing ; on interroge directement la base de données de MAS (`matrixauthenticationservice` par défaut, ou la valeur de `MAS_DB_NAME`) :
+```bash
+docker exec -it ess-community su - postgres -c "psql -d matrixauthenticationservice -c 'SELECT username, created_at, can_request_admin AS admin, locked_at, deactivated_at FROM users ORDER BY username;'"
+```
+Les colonnes `locked_at` et `deactivated_at` sont renseignées pour les comptes verrouillés ou désactivés.
+
+**Modifier le mot de passe d'un utilisateur :**
+```bash
+docker exec -it ess-community mas-cli manage set-password alice "NouveauMotDePasse456!" --config /data/config/mas.yaml
+```
+Les sessions déjà ouvertes restent actives. Pour forcer l'utilisateur à se reconnecter partout avec le nouveau mot de passe :
+```bash
+docker exec -it ess-community mas-cli manage kill-sessions alice --config /data/config/mas.yaml
+```
+
+**Supprimer (désactiver) un utilisateur :**
+
+Dans Matrix, un compte ne peut pas être effacé définitivement : son identifiant (`@alice:votredomaine.fr`) reste réservé pour éviter toute usurpation. La « suppression » consiste à désactiver le compte, ce qui ferme ses sessions, le retire de ses salons et l'empêche de se reconnecter :
+```bash
+docker exec -it ess-community mas-cli manage lock-user --deactivate alice --config /data/config/mas.yaml
+```
+Sans l'option `--deactivate`, le compte est seulement verrouillé (connexion bloquée) et peut être réactivé plus tard avec :
+```bash
+docker exec -it ess-community mas-cli manage unlock-user alice --config /data/config/mas.yaml
 ```
 
 ---
