@@ -405,3 +405,43 @@ Les anciennes images restent stockées sur le NAS. Une fois la nouvelle version 
 sudo docker rmi ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:previous
 sudo docker image prune
 ```
+
+---
+
+### Tester sous Windows
+
+Pour essayer une modification de l'image avant de la publier, vous pouvez construire et lancer le conteneur sur un PC Windows.
+
+#### Prérequis
+
+1. **WSL 2** : dans un terminal PowerShell ouvert en administrateur, exécutez `wsl --install`, puis redémarrez le PC. La virtualisation doit être activée dans le BIOS/UEFI (vérifiable dans le **Gestionnaire des tâches** > **Performance** > **Processeur** > *Virtualisation*). Sous Windows 11 Famille, Hyper-V n'est pas disponible : WSL 2 est le seul moteur possible.
+2. **Docker Desktop** : installez-le depuis [docker.com](https://www.docker.com/products/docker-desktop/) en conservant l'option **Use WSL 2 based engine**. Il fournit les commandes `docker`, `docker compose` et `docker buildx`.
+3. **Fins de ligne** : le fichier `.gitattributes` du dépôt force les fichiers de `docker/synology/` en fins de ligne LF. Si votre copie du dépôt date d'avant son ajout, ces fichiers peuvent être en CRLF : le conteneur échoue alors au démarrage (`/bin/bash^M: bad interpreter`). Rechargez-les avec :
+   ```powershell
+   git rm --cached -r docker/synology
+   git reset --hard
+   ```
+   (cette commande annule les modifications locales non commitées).
+
+#### Construire et lancer
+
+Depuis le dossier `docker/synology` :
+
+```powershell
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Le fichier `docker-compose.dev.yml` construit l'image locale `ess-synology:dev` et la sert sur `http://localhost:8080`, avec le compte `admin` / `Local-Dev-Admin-2026!`. Les données sont conservées dans un volume Docker nommé, et non dans un dossier Windows : PostgreSQL refuse de démarrer sur un montage NTFS, dont il ne peut pas contrôler les droits.
+
+- Arrêter : **Ctrl + C**, ou `docker compose -f docker-compose.dev.yml down`.
+- Repartir de zéro (comptes, base de données, secrets) : `docker compose -f docker-compose.dev.yml down -v`.
+- Ouvrir un terminal dans le conteneur : `docker exec -it ess-community-dev bash`.
+
+Pour tester l'image publiée plutôt que le code local, remplacez la construction par `docker pull ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest`. Pour reproduire un NAS ARM, ajoutez `--platform linux/arm64` : l'image est alors émulée, et nettement plus lente.
+
+#### Limites du test local
+
+- **Fonctionnent** : Element Web, Element Admin, la connexion via MAS et la messagerie. Les navigateurs considèrent `http://localhost` comme sûr, HTTPS n'est donc pas nécessaire.
+- **Appels audio/vidéo** : ils sont désactivés (`ENABLE_MATRIX_RTC=false`, `ENABLE_TURN=false`). Element Call exige une adresse en HTTPS (`wss://`) et une IP publique joignable : ils se testent sur le NAS.
+- **Applications mobiles** : elles ne peuvent pas joindre `localhost`. Testez-les sur le NAS.
+- **Port 8080 déjà utilisé** : remplacez `"8080:8080"` par `"8090:8080"` dans `docker-compose.dev.yml`, et `PUBLIC_BASEURL` par `http://localhost:8090`.

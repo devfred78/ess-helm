@@ -1,0 +1,48 @@
+# Copyright 2026 Element Creations Ltd
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# Docker Compose de test local (Docker Desktop sous Windows, macOS ou Linux)
+# Construit l'image depuis ce dossier et la sert sur http://localhost:8080
+#
+#   docker compose -f docker-compose.dev.yml up --build
+#
+# Remise à zéro complète (comptes, base de données, secrets) :
+#
+#   docker compose -f docker-compose.dev.yml down -v
+
+services:
+  ess-community:
+    build:
+      context: .
+    image: ess-synology:dev
+    container_name: ess-community-dev
+    ports:
+      - "8080:8080"
+    volumes:
+      # Volume nommé plutôt qu'un dossier Windows : PostgreSQL exige que son
+      # répertoire de données appartienne à l'utilisateur postgres (droits 0700),
+      # ce qu'un montage NTFS ne permet pas.
+      - ess-data:/data
+    environment:
+      - SERVER_NAME=localhost
+      - PUBLIC_BASEURL=http://localhost:8080
+      - ENABLE_INTERNAL_POSTGRES=true
+      - ENABLE_ELEMENT_WEB=true
+      - ENABLE_ELEMENT_ADMIN=true
+      - ENABLE_MAS=true
+      # Appels désactivés : ils nécessitent HTTPS et une IP publique joignable
+      - ENABLE_MATRIX_RTC=false
+      - ENABLE_TURN=false
+      - INITIAL_ADMIN_USER=admin
+      - INITIAL_ADMIN_PASSWORD=Local-Dev-Admin-2026!
+      - TZ=Europe/Paris
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://127.0.0.1:8080/_matrix/client/versions || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ess-data:

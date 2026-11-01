@@ -1,0 +1,8 @@
+# Copyright 2026 Element Creations Ltd
+#
+# SPDX-License-Identifier: AGPL-3.0-only
+
+# Les fichiers copiés dans l'image Synology (scripts shell, templates, Caddyfile,
+# configuration Supervisor) doivent rester en LF, même sur un poste Windows avec
+# core.autocrlf=true : un retour chariot casse l'entrypoint (« bad interpreter »).
+docker/synology/** text eol=lf
