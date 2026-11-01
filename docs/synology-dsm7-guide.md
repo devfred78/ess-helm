@@ -282,6 +282,30 @@ Une fois le proxy inversé configuré, votre suite Element est immédiatement di
 1. Rendez-vous sur `https://matrix.votredomaine.fr/`.
 2. Connectez-vous avec l'identifiant `admin` et le mot de passe défini dans `INITIAL_ADMIN_PASSWORD`.
 
+#### Extensions (widgets) : « vous n'avez pas la permission » pour le créateur du salon
+
+Le gestionnaire d'extensions d'Element (panneau d'informations du salon > **Extensions** > **Ajouter des extensions**, service `scalar.vector.im`) refuse l'ajout d'une extension au créateur d'un salon récent.
+
+- **Cause** : Synapse crée les salons en **version 12**. Dans cette version, le créateur a un pouvoir illimité, mais il ne figure plus dans la liste des niveaux de droits du salon. Le gestionnaire d'extensions calcule lui-même le niveau de l'utilisateur à partir de cette liste, sans connaître cette règle : il attribue au créateur le niveau par défaut (0), inférieur au niveau 50 requis. Ce défaut est propre au service d'Element : Synapse, lui, accepte la modification.
+- **Administrateur du serveur** : il n'a aucun droit particulier dans les salons, par conception de Matrix. Il est traité comme n'importe quel membre.
+- **Contournements** :
+  - **Ajouter l'extension par son adresse**, sans le gestionnaire : dans la zone de saisie du salon (Element Web ou Element Desktop), tapez `/addwidget https://adresse-de-l-extension`. Element Web vérifie lui-même les droits, et reconnaît le créateur. Exemple avec Jitsi Meet ci-dessous.
+  - **Nommer un second administrateur** : dans **Paramètres du salon** > **Rôles et permissions**, donnez le rôle *Administrateur* à un autre compte. Il apparaît alors dans la liste des niveaux, et le gestionnaire d'extensions devrait l'autoriser (non vérifié).
+  - Régler **Modifier les widgets** sur *Par défaut* ne suffit pas : le gestionnaire d'extensions refuse toujours l'ajout.
+
+**Ajouter une visioconférence Jitsi Meet** : tapez dans le salon
+
+```text
+/addwidget https://meet.element.io/NomDeLaConference
+```
+
+en remplaçant `NomDeLaConference` par un nom de votre choix, sans espace ni accent (par exemple `ReunionFamille-7k3Fq9`).
+
+- Element Web reconnaît une adresse sur `meet.element.io`, son serveur Jitsi par défaut, et crée un véritable widget Jitsi, et non une simple page web intégrée. Le widget apparaît dans **Extensions**, et chaque membre clique sur **Join Conference** (bouton non traduit). Une autre adresse Jitsi, comme `meet.jit.si`, est ajoutée comme page web ordinaire.
+- `meet.element.io` est un service public d'Element, sans compte : toute personne qui connaît le nom de la conférence peut la rejoindre. Choisissez donc un nom difficile à deviner. Les flux audio/vidéo passent par les serveurs d'Element, et non par votre NAS.
+- Pour une visioconférence hébergée sur votre NAS et chiffrée de bout en bout, préférez le bouton d'appel vidéo du salon, qui utilise Element Call (voir [Appels audio et vidéo](#appels-audio-et-vidéo-element-call-et-turn)).
+- Pour retirer le widget : **Extensions**, menu **⋯** du widget > **Supprimer pour tout le monde**.
+
 ---
 
 ### Gestion des Utilisateurs
