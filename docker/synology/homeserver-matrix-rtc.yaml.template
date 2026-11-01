@@ -22,3 +22,25 @@ matrix_rtc:
   transports:
     - type: livekit
       livekit_service_url: "${PUBLIC_BASEURL}/livekit/jwt"
+
+# Droits des nouveaux salons de groupe : tout membre peut rejoindre un appel Element Call.
+# Rejoindre un appel publie un événement d'état org.matrix.msc3401.call.member, qui exige sinon
+# le niveau modérateur (state_default : 50). Element Web l'abaisse lui-même à la création d'un
+# salon, mais pas Element Classic ni d'autres clients : dans leurs salons, seuls les modérateurs
+# pouvaient participer, alors que les appels à deux (salons privés trusted_private_chat, où les
+# deux participants sont administrateurs) fonctionnaient.
+# Synapse remplace la liste "events" entière : on reprend donc ses valeurs par défaut pour la
+# version de salon 12 (tombstone : 150, réservé aux créateurs du salon).
+default_power_level_content_override:
+  private_chat: &group_room_power_levels
+    events:
+      m.room.name: 50
+      m.room.power_levels: 100
+      m.room.history_visibility: 100
+      m.room.canonical_alias: 50
+      m.room.avatar: 50
+      m.room.tombstone: 150
+      m.room.server_acl: 100
+      m.room.encryption: 100
+      org.matrix.msc3401.call.member: 0
+  public_chat: *group_room_power_levels

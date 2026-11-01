@@ -126,3 +126,52 @@ def test_admin_baseurl_override(ess):
     response = ess.get("/admin")
     assert response.status_code == 302
     assert response.headers["location"] == f"{ADMIN_BASEURL}/"
+
+
+@pytest.fixture(scope="module")
+def member(ess):
+    """Utilisateur ordinaire (non administrateur), avec son jeton d'accès."""
+    ess.exec("register-user", "--yes", "--password", "Bob-Test-Password-2026!", "bob")
+    return "bob", ess.login("bob", "Bob-Test-Password-2026!")
+
+
+@pytest.mark.parametrize("preset", ["private_chat", "public_chat"])
+def test_regular_members_can_join_group_calls(ess, access_token, member, preset):
+    # Salon créé sans réglage des droits d'appel, comme le font Element Classic et d'autres
+    # clients. Rejoindre un appel Element Call revient à publier un événement d'état
+    # org.matrix.msc3401.call.member : sans abaissement de son niveau, il faut être modérateur
+    # (state_default : 50). Les salons privés à deux (trusted_private_chat) n'ont pas ce problème :
+    # les deux participants y sont administrateurs.
+    localpart, member_token = member
+    room_id = ess.create_room(access_token, preset=preset, invite=[ess.user_id(localpart)])
+    assert ess.post(
+        f"/_matrix/client/v3/rooms/{room_id}/join", json={}, headers=ess.auth_headers(member_token)
+    ).is_success
+
+    state_key = f"_{ess.user_id(localpart)}_PYTESTDEVICE_m.call"
+    response = ess.put(
+        f"/_matrix/client/v3/rooms/{room_id}/state/org.matrix.msc3401.call.member/{state_key}",
+        json={"application": "m.call", "call_id": "", "scope": "m.room", "device_id": "PYTESTDEVICE"},
+        headers=ess.auth_headers(member_token),
+    )
+    assert response.status_code == 200, response.text
+
+
+def test_group_room_power_levels_keep_synapse_defaults(ess, access_token):
+    # default_power_level_content_override remplace toute la liste "events" de Synapse
+    room_id = ess.create_room(access_token, preset="private_chat")
+    power_levels = ess.get(
+        f"/_matrix/client/v3/rooms/{room_id}/state/m.room.power_levels", headers=ess.auth_headers(access_token)
+    ).json()
+    assert power_levels["events"] == {
+        "m.room.name": 50,
+        "m.room.power_levels": 100,
+        "m.room.history_visibility": 100,
+        "m.room.canonical_alias": 50,
+        "m.room.avatar": 50,
+        "m.room.tombstone": 150,
+        "m.room.server_acl": 100,
+        "m.room.encryption": 100,
+        "org.matrix.msc3401.call.member": 0,
+    }
+    assert power_levels["state_default"] == 50
