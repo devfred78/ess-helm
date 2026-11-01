@@ -9,6 +9,8 @@ services:
     ports:
       # Port HTTP interne (à connecter au proxy inversé de Synology DSM)
       - "8080:8080"
+      # Console Element Admin (à connecter à une seconde règle du proxy inversé, ex : port 8443)
+      - "8088:8088"
       # Port optionnel pour la fédération Matrix directe (si utilisé)
       # - "8448:8448"
       # Appels Element Call / MatrixRTC (LiveKit SFU) : à rediriger aussi sur la box
@@ -27,6 +29,8 @@ services:
       - SERVER_NAME=${SERVER_NAME:-matrix.exemple.com}
       # URL publique d'accès (derrière le reverse proxy SSL de Synology DSM)
       - PUBLIC_BASEURL=${PUBLIC_BASEURL:-https://matrix.exemple.com}
+      # URL publique de la console Element Admin (par défaut : même nom d'hôte, port 8443)
+      # - ADMIN_BASEURL=https://matrix.exemple.com:8443
       # Activation des composants intégrés
       - ENABLE_INTERNAL_POSTGRES=true
       - ENABLE_ELEMENT_WEB=true

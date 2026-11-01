@@ -1,0 +1,33 @@
+
+# Element Admin Console, ajoutée à la suite du Caddyfile par l'entrypoint si ENABLE_ELEMENT_ADMIN=true.
+# Element Admin doit être servi à la racine de son origine : il charge ses scripts depuis /assets/
+# et s'enregistre auprès de MAS avec <origine>/callback comme adresse de retour. Il dispose donc de
+# son propre port, publié derrière le proxy inversé de DSM (ex : https://matrix.exemple.com:8443).
+:8088 {
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+
+    # Mêmes en-têtes que l'image officielle d'Element Admin
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+    # Les scripts portent un hash dans leur nom ; l'index, lui, doit être revalidé à chaque
+    # chargement, sans quoi le navigateur réclamerait après une mise à jour des scripts disparus
+    header /assets/* Cache-Control "public, max-age=31536000, immutable"
+    @index not path /assets/*
+    header @index Cache-Control no-cache
+
+    root * /var/www/element-admin
+    # index.runtime.html est l'index.html complété par l'entrypoint avec la configuration (serverName).
+    # Toute route inconnue (ex : /callback, /users) renvoie vers lui : le routage est fait par l'application.
+    try_files {path} /index.runtime.html
+    file_server {
+        index index.runtime.html
+        precompressed gzip
+    }
+}

@@ -85,6 +85,7 @@ RUN mkdir -p /data /templates /var/log/supervisor /var/run/postgresql \
 # Copie des configurations et scripts
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY Caddyfile /templates/Caddyfile.template
+COPY Caddyfile-admin.template /templates/Caddyfile-admin.template
 COPY homeserver.yaml.template /templates/homeserver.yaml.template
 COPY mas.yaml.template /templates/mas.yaml.template
 COPY element-config.json.template /templates/element-config.json.template
@@ -99,11 +100,12 @@ COPY register-user.sh /usr/local/bin/register-user
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/register-user
 
 # Exposition des ports :
-# 8080 : Port HTTP principal (Reverse proxy Caddy vers Synapse, MAS, Element Web/Admin)
+# 8080 : Port HTTP principal (Reverse proxy Caddy vers Synapse, MAS, Element Web)
+# 8088 : Console Element Admin (servie à la racine de son propre port)
 # 8448 : Port Matrix Federation (optionnel)
 # 7881/tcp, 7882/udp : Flux audio/vidéo MatrixRTC (LiveKit SFU)
 # 3478/udp+tcp, 49160-49169/udp : Serveur TURN coturn (appels 1:1 historiques)
-EXPOSE 8080 8448 7881/tcp 7882/udp 3478/tcp 3478/udp 49160-49169/udp
+EXPOSE 8080 8088 8448 7881/tcp 7882/udp 3478/tcp 3478/udp 49160-49169/udp
 
 VOLUME ["/data"]
 

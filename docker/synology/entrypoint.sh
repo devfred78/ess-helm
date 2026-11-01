@@ -33,6 +33,7 @@ normalize_bool() {
         *) echo false ;;
     esac
 }
+export ENABLE_ELEMENT_ADMIN=$(normalize_bool "${ENABLE_ELEMENT_ADMIN:-true}")
 export ENABLE_MATRIX_RTC=$(normalize_bool "${ENABLE_MATRIX_RTC:-true}")
 export ENABLE_TURN=$(normalize_bool "${ENABLE_TURN:-true}")
 export TURN_MIN_PORT=${TURN_MIN_PORT:-49160}
@@ -40,6 +41,19 @@ export TURN_MAX_PORT=${TURN_MAX_PORT:-49169}
 export LIVEKIT_KEY=matrix-rtc
 # IP publique de la box (facultative : détectée automatiquement sinon)
 export PUBLIC_IP=${PUBLIC_IP:-}
+
+# URL publique d'Element Admin, servi sur le port 8088 du conteneur. Par défaut : même nom d'hôte
+# que PUBLIC_BASEURL, sur le port 8443 en HTTPS (proxy inversé de DSM) ou 8088 en HTTP (test local).
+if [ -z "$ADMIN_BASEURL" ]; then
+    PUBLIC_HOST=${PUBLIC_BASEURL#*://}
+    PUBLIC_HOST=${PUBLIC_HOST%%/*}
+    PUBLIC_HOST=${PUBLIC_HOST%%:*}
+    case "$PUBLIC_BASEURL" in
+        https://*) ADMIN_BASEURL="https://$PUBLIC_HOST:8443" ;;
+        *) ADMIN_BASEURL="http://$PUBLIC_HOST:8088" ;;
+    esac
+fi
+export ADMIN_BASEURL=${ADMIN_BASEURL%/}
 
 export POSTGRES_USER=${POSTGRES_USER:-synapse}
 export POSTGRES_PORT=${POSTGRES_PORT:-5432}
@@ -227,6 +241,14 @@ fi
 envsubst < /templates/mas.yaml.template > "$CONFIG_DIR/mas.yaml"
 envsubst < /templates/Caddyfile.template > "$CONFIG_DIR/Caddyfile"
 
+# Configuration d'Element Admin : comme son image officielle, on remplace APP_CONFIG_PLACEHOLDER
+# par la configuration encodée en base64 (délimiteur "|" : le base64 peut contenir "/")
+if [ "$ENABLE_ELEMENT_ADMIN" = "true" ] && [ -d "/var/www/element-admin" ]; then
+    ELEMENT_ADMIN_CONFIG=$(printf '{"serverName": "%s"}' "$SERVER_NAME" | base64 -w 0)
+    sed "s|APP_CONFIG_PLACEHOLDER|${ELEMENT_ADMIN_CONFIG}|" /var/www/element-admin/index.html > /var/www/element-admin/index.runtime.html
+    envsubst < /templates/Caddyfile-admin.template >> "$CONFIG_DIR/Caddyfile"
+fi
+
 # Configuration d'Element Web
 if [ -d "/var/www/element-web" ]; then
     envsubst < /templates/element-config.json.template > /var/www/element-web/config.json
@@ -252,7 +274,9 @@ echo "=================================================================="
 echo " Server Name    : $SERVER_NAME"
 echo " Public URL     : $PUBLIC_BASEURL"
 echo " Web Client     : $PUBLIC_BASEURL/"
-echo " Admin Console  : $PUBLIC_BASEURL/admin/"
+if [ "$ENABLE_ELEMENT_ADMIN" = "true" ]; then
+echo " Admin Console  : $ADMIN_BASEURL/ (port 8088 du conteneur)"
+fi
 echo " Matrix Endpoint: $PUBLIC_BASEURL/_matrix/"
 echo " MAS Endpoint   : $PUBLIC_BASEURL/auth/"
 if [ "$ENABLE_MATRIX_RTC" = "true" ]; then

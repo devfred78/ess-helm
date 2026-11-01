@@ -45,6 +45,8 @@ class EssContainer:
     public_baseurl: str
     # URL utilisée par les tests : 127.0.0.1 plutôt que localhost, que Windows résout d'abord en ::1
     endpoint: str
+    # Port 8088 du conteneur (Element Admin), vu depuis l'hôte
+    admin_endpoint: str
     server_name: str
 
     def url(self, path: str) -> str:
@@ -61,6 +63,9 @@ class EssContainer:
 
     def options(self, path: str, **kwargs: Any) -> httpx.Response:
         return httpx.options(self.url(path), timeout=30, **kwargs)
+
+    def get_admin(self, path: str, **kwargs: Any) -> httpx.Response:
+        return httpx.get(f"{self.admin_endpoint}{path}", timeout=30, **kwargs)
 
     def exec(self, *command: str) -> str:
         return str(docker.execute(self.container, list(command)))
@@ -166,12 +171,13 @@ def run_ess_container(image: str, scenario: str, envs: Mapping[str, str]) -> Ite
     part d'une installation vierge.
     """
     port = free_port()
+    admin_port = free_port()
     public_baseurl = f"http://localhost:{port}"
     container = docker.run(
         image,
         detach=True,
         name=f"ess-synology-test-{scenario}-{uuid.uuid4().hex[:8]}",
-        publish=[(f"127.0.0.1:{port}", 8080)],
+        publish=[(f"127.0.0.1:{port}", 8080), (f"127.0.0.1:{admin_port}", 8088)],
         envs={
             "SERVER_NAME": "localhost",
             "PUBLIC_BASEURL": public_baseurl,
@@ -181,7 +187,9 @@ def run_ess_container(image: str, scenario: str, envs: Mapping[str, str]) -> Ite
             **envs,
         },
     )
-    ess = EssContainer(container, public_baseurl, f"http://127.0.0.1:{port}", "localhost")
+    ess = EssContainer(
+        container, public_baseurl, f"http://127.0.0.1:{port}", f"http://127.0.0.1:{admin_port}", "localhost"
+    )
     try:
         ess.wait_until_ready()
         yield ess

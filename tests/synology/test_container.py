@@ -4,6 +4,8 @@
 
 # Conteneur lancé comme avec docker-compose.dev.yml : appels audio/vidéo désactivés.
 
+import base64
+import json
 import re
 import uuid
 
@@ -79,22 +81,66 @@ def test_element_web_config(ess):
     assert config["element_call"]["use_exclusively"] is False
 
 
-# Element Admin est compilé pour être servi à la racine d'un domaine (scripts en /assets/...) :
-# sous /admin/, Caddy renvoie à la place l'index d'Element Web et la console ne se charge pas.
-# strict=True : le test signalera la correction pour qu'on retire ce marqueur.
-@pytest.mark.xfail(strict=True, reason="Element Admin ne fonctionne pas sous le préfixe /admin/")
-def test_element_admin(ess):
-    response = ess.get("/admin/")
+def element_admin_config(index_html: str) -> dict:
+    encoded = re.search(r'window\.APP_CONFIG_BASE64 = "([^"]*)"', index_html)
+    assert encoded, "Configuration d'Element Admin introuvable dans l'index"
+    return json.loads(base64.b64decode(encoded.group(1)))
+
+
+@pytest.mark.parametrize("path", ["/", "/callback", "/users"])
+def test_element_admin_index(ess, path):
+    # Element Admin est servi à la racine du port 8088 ; ses routes (dont le retour de connexion
+    # /callback) sont gérées par l'application et renvoient toutes l'index
+    response = ess.get_admin(path)
     assert response.status_code == 200
-    assert "<html" in response.text
-    # Les scripts doivent être servis par Element Admin, et non par le repli vers l'index d'Element Web
-    scripts = re.findall(r'<script[^>]+src="([^"]+)"', response.text)
-    assert scripts
-    for script in scripts:
-        path = script if script.startswith("/") else f"/admin/{script.removeprefix('./')}"
-        asset = ess.get(path)
+    assert response.headers["cache-control"] == "no-cache"
+    assert element_admin_config(response.text) == {"serverName": "localhost"}
+
+
+def test_element_admin_assets(ess):
+    index = ess.get_admin("/").text
+    assets = re.findall(r'<(?:script|link)[^>]+(?:src|href)="(/assets/[^"]+)"', index)
+    assert assets
+    for path in assets:
+        asset = ess.get_admin(path)
         assert asset.status_code == 200, path
-        assert "javascript" in asset.headers["content-type"], path
+        # Un repli vers l'index renverrait du HTML à la place
+        expected = "text/css" if path.endswith(".css") else "javascript"
+        assert expected in asset.headers["content-type"], path
+        assert "immutable" in asset.headers["cache-control"], path
+
+
+def test_admin_path_redirects_to_admin_port(ess):
+    # Sans ADMIN_BASEURL, l'entrypoint reprend le nom d'hôte de PUBLIC_BASEURL (HTTP : port 8088)
+    response = ess.get("/admin/")
+    assert response.status_code == 302
+    assert response.headers["location"] == "http://localhost:8088/"
+
+
+def test_well_known_client_allows_element_admin_origin(ess):
+    # Element Admin, servi sur un autre port, lit ce fichier depuis le navigateur
+    response = ess.get("/.well-known/matrix/client", headers={"Origin": "https://matrix.example.com:8443"})
+    assert response.headers.get_list("access-control-allow-origin") == ["*"]
+
+
+def test_mas_accepts_element_admin_registration(ess):
+    # Enregistrement dynamique effectué par Element Admin à la connexion, depuis son origine
+    # publique sur le NAS (proxy inversé HTTPS de DSM vers le port 8088)
+    origin = "https://matrix.example.com:8443"
+    response = ess.post(
+        "/auth/oauth2/registration",
+        json={
+            "application_type": "web",
+            "client_name": "Element Admin",
+            "client_uri": f"{origin}/",
+            "redirect_uris": [f"{origin}/callback"],
+            "token_endpoint_auth_method": "none",
+            "grant_types": ["authorization_code", "refresh_token"],
+            "response_types": ["code"],
+        },
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["client_id"]
 
 
 def test_initial_admin_is_admin(ess, access_token):

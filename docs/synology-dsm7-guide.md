@@ -15,7 +15,7 @@ Le conteneur regroupe de manière optimisée et autonome tous les composants né
 - **PostgreSQL 16** : Base de données relationnelle haute performance préconfigurée en interne.
 - **LiveKit SFU** et **MatrixRTC Authorisation Service** (`lk-jwt-service`) : le backend des appels audio/vidéo **Element Call** (appels 1:1 et de groupe dans Element Web et Element X, salons vidéo).
 - **coturn** : serveur TURN utilisé par les appels 1:1 « historiques » des applications Element classiques (Element Android / iOS).
-- **Caddy (Reverse proxy interne)** : Aiguille automatiquement les requêtes (`/_matrix`, `/_synapse`, `/auth`, `/admin`, `/livekit`, `/` et `.well-known`).
+- **Caddy (Reverse proxy interne)** : Aiguille automatiquement les requêtes du port 8080 (`/_matrix`, `/_synapse`, `/auth`, `/livekit`, `/` et `.well-known`) et sert Element Admin sur un port dédié, 8088.
 - **Supervisor** : Gestionnaire de processus robuste assurant la persistance et le redémarrage des services.
 
 Toutes les données, configurations, bases de données, clés de chiffrement et médias sont stockés de façon persistante dans un unique dossier `/data` sur votre NAS.
@@ -41,11 +41,14 @@ Toutes les données, configurations, bases de données, clés de chiffrement et 
    | Port(s) | Protocole | Usage | Obligatoire |
    |---|---|---|---|
    | 80, 443 | TCP | Accès web HTTPS et certificat Let's Encrypt | Oui |
+   | 8443 | TCP | Console d'administration Element Admin | Voir ci-dessous |
    | 7881 | TCP | Appels Element Call (flux audio/vidéo, repli TCP) | Pour les appels |
    | 7882 | UDP | Appels Element Call (flux audio/vidéo) | Pour les appels |
    | 3478 | UDP **et** TCP | Serveur TURN (appels 1:1 des applications Element classiques) | Recommandé |
    | 49160-49169 | UDP | Serveur TURN : ports de relais | Recommandé |
 
+   > Le port 8443 est nécessaire pour ouvrir Element Admin **depuis Internet**, mais aussi depuis le réseau local avec l'adresse `https://matrix.votredomaine.fr:8443` : celle-ci pointe vers l'IP publique, et la box ne renvoie le trafic vers le NAS que pour les ports redirigés. Pour limiter la console au réseau local, redirigez-le quand même et restreignez l'accès dans DSM (voir [Configuration du Proxy Inversé](#configuration-du-proxy-inversé-et-du-ssl-dans-synology-dsm-71)).
+   >
    > Les ports d'appel ne passent **pas** par le proxy inversé de DSM : ce sont des flux directs, qui doivent arriver tels quels jusqu'au conteneur. Sans eux, la connexion et les messages fonctionnent, mais les appels restent sans son ni image.
 
    Si votre box le permet, attribuez aussi au NAS une **adresse IP locale fixe** (bail DHCP statique), sans quoi les redirections cesseront de fonctionner le jour où son adresse change.
@@ -107,6 +110,7 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
      - `INITIAL_ADMIN_USER` : `admin` (nom du compte administrateur initial)
      - `INITIAL_ADMIN_PASSWORD` : `UnMotDePasseTresSecurise!`
      - `TZ` : `Europe/Paris`
+   - Facultatif, pour la console d'administration : `ADMIN_BASEURL`, son adresse publique. Sans cette variable, l'adresse utilisée est celle de `PUBLIC_BASEURL` sur le port 8443 (`https://matrix.votredomaine.fr:8443`). Renseignez-la seulement si vous publiez la console autrement (autre port ou sous-domaine), par exemple `https://admin.votredomaine.fr`.
    - Facultatif, pour les appels audio/vidéo (voir [Appels audio et vidéo](#appels-audio-et-vidéo-element-call-et-turn)) :
      - `PUBLIC_IP` : l'adresse IP publique de votre box. À laisser vide dans un premier temps : elle est détectée automatiquement. Renseignez-la seulement si les appels se connectent mais restent sans son ni image.
      - `ENABLE_MATRIX_RTC` et `ENABLE_TURN` sont pré-remplies à `true`. Passez-les à `false` pour désactiver respectivement Element Call ou le serveur TURN.
@@ -119,6 +123,7 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
    | Port du conteneur | Type | Port local |
    |---|---|---|
    | 8080 | TCP | `8080` (ou un port libre de votre choix, à reporter dans le proxy inversé) |
+   | 8088 | TCP | `8088` (ou un port libre de votre choix, à reporter dans le proxy inversé) |
    | 8448 | TCP | laissez `Auto` (inutilisé) |
    | 7881 | TCP | `7881` |
    | 7882 | UDP | `7882` |
@@ -126,7 +131,7 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
    | 3478 | UDP | `3478` |
    | 49160 à 49169 | UDP | le **même numéro** que le port du conteneur (`49160`, `49161`… `49169`) |
 
-   - Hormis 8080, les ports locaux doivent être **identiques** aux ports du conteneur : les clients se connectent directement au numéro de port annoncé par le serveur. Ne laissez pas `Auto`, qui attribuerait un port au hasard.
+   - Hormis 8080 et 8088, les ports locaux doivent être **identiques** aux ports du conteneur : les clients se connectent directement au numéro de port annoncé par le serveur. Ne laissez pas `Auto`, qui attribuerait un port au hasard.
    - Si une ligne manque, ajoutez-la avec le bouton **+** en choisissant le bon type (TCP/UDP).
    - Si le TURN est désactivé (`ENABLE_TURN=false`), vous pouvez supprimer les lignes 3478 et 49160-49169.
    - Cliquez sur **Suivant**
@@ -149,7 +154,7 @@ L'image est construite par le workflow GitHub Actions `docker-synology.yml` et p
 Si vous préférez déployer en ligne de commande ou via le planificateur de tâches de DSM :
 
 1. Déposez le fichier `docker-compose.yml` dans `/volume1/docker/element/docker-compose.yml`.
-2. Modifiez les variables `SERVER_NAME` et `PUBLIC_BASEURL` avec votre nom de domaine. Les ports d'appel (7881, 7882, 3478, 49160-49169) y sont déjà publiés : il reste à les rediriger sur la box (voir les prérequis).
+2. Modifiez les variables `SERVER_NAME` et `PUBLIC_BASEURL` avec votre nom de domaine. Le port 8088 d'Element Admin et les ports d'appel (7881, 7882, 3478, 49160-49169) y sont déjà publiés : il reste à les rediriger sur la box (voir les prérequis).
    Vérifiez également la ligne `image:` : sans variable `GITHUB_REPOSITORY` définie, elle pointe vers `ghcr.io/element-hq/ess-helm/ess-synology:latest`. Remplacez-la par le chemin de votre image (ex : `ghcr.io/devfred78/ess-helm/ess-synology:latest`) ou lancez la commande avec `GITHUB_REPOSITORY=<utilisateur>/<dépôt>` en préfixe.
 3. Exécutez la commande suivante en SSH (ou via une tâche utilisateur déclenchée dans DSM) :
    ```bash
@@ -181,10 +186,26 @@ Pour que votre serveur soit accessible de manière sécurisée en HTTPS avec Let
      - Cliquez sur **Créer** > **WebSocket**.
      - DSM configure automatiquement les en-têtes `Upgrade` et `Connection`.
 
-4. **Association du certificat SSL** :
+4. Cliquez de nouveau sur **Créer** pour la console **Element Admin**. Element Admin ne fonctionne qu'à la racine d'une adresse : il dispose donc de son propre port, et non d'un chemin `/admin`.
+   - **Général** :
+     - Nom de la description : `Element Admin ESS`
+     - **Source** :
+       - Protocole : `HTTPS`
+       - Nom d'hôte : `matrix.votredomaine.fr` (le même que pour la règle précédente : le certificat existant convient)
+       - Port : `8443`
+       - Cochez **Activer HSTS**.
+       - Facultatif : dans **Profil de contrôle d'accès**, choisissez un profil qui n'autorise que votre réseau local (par exemple `192.168.1.0/24`), pour que la console ne soit pas joignable depuis Internet. Les profils se créent dans **Portail de connexion** > **Avancé** > **Profil de contrôle d'accès**.
+     - **Destination** :
+       - Protocole : `HTTP`
+       - Nom d'hôte : `localhost`
+       - Port : `8088`
+   - Aucun en-tête personnalisé n'est nécessaire.
+   - Si vous publiez la console sur un autre port ou sous un autre nom d'hôte, renseignez son adresse dans la variable `ADMIN_BASEURL` du conteneur (ex : `https://admin.votredomaine.fr`).
+
+5. **Association du certificat SSL** :
    - Allez dans **Panneau de configuration** > **Sécurité** > **Certificat**.
    - Cliquez sur **Paramètres**.
-   - Repérez la ligne correspondant à votre proxy inversé `matrix.votredomaine.fr` et assignez-lui votre certificat Let's Encrypt.
+   - Repérez les lignes correspondant à vos deux règles de proxy inversé (`matrix.votredomaine.fr` et `matrix.votredomaine.fr:8443`) et assignez-leur votre certificat Let's Encrypt.
    - Cliquez sur **OK**.
 
 ---
@@ -248,7 +269,7 @@ Tous les secrets nécessaires (clé LiveKit, jetons de l'application service, se
 Une fois le proxy inversé configuré, votre suite Element est immédiatement disponible :
 
 - **Client Web Element** : `https://matrix.votredomaine.fr/`
-- **Console d'administration Element Admin** : `https://matrix.votredomaine.fr/admin/`
+- **Console d'administration Element Admin** : `https://matrix.votredomaine.fr:8443/` (l'ancienne adresse `https://matrix.votredomaine.fr/admin/` y redirige). Connectez-vous avec un compte administrateur, comme le compte `admin` initial : Element Admin passe par la page de connexion de MAS, puis revient sur la console.
 - **Point d'entrée Matrix (Synapse)** : `https://matrix.votredomaine.fr/_matrix/`
 - **Service d'authentification (MAS)** : `https://matrix.votredomaine.fr/auth/`
 
@@ -369,6 +390,8 @@ Le téléchargement remplace l'étiquette `latest` mais ne modifie pas le conten
 
 > **Première mise à jour vers une image avec les appels audio/vidéo :** **Réinitialiser** conserve les anciens paramètres de ports, qui ne comprennent pas les ports d'appel. Avant de démarrer le conteneur, ouvrez **Modifier** > **Paramètres des ports** et ajoutez les ports 7881/TCP, 7882/UDP, 3478/TCP, 3478/UDP et 49160 à 49169/UDP, avec des ports locaux identiques (voir l'[étape 2.5 de la Méthode 1](#étape-2--création-du-conteneur)). Si DSM ne permet pas de modifier les ports, supprimez puis recréez le conteneur comme indiqué ci-dessous. Pensez aussi aux redirections sur la box et au pare-feu (voir [Appels audio et vidéo](#appels-audio-et-vidéo-element-call-et-turn)).
 
+> **Première mise à jour vers une image avec le port dédié d'Element Admin :** Element Admin n'est plus servi sous `/admin`, mais sur le port 8088 du conteneur. Comme pour les ports d'appel, ajoutez le port 8088/TCP (port local `8088`) dans **Modifier** > **Paramètres des ports**, puis créez la règle de proxy inversé du port 8443 et la redirection de ce port sur la box (voir [Configuration du Proxy Inversé](#configuration-du-proxy-inversé-et-du-ssl-dans-synology-dsm-71)).
+
 Si l'action **Réinitialiser** n'est pas disponible, supprimez le conteneur (conteneur arrêté : **Action** > **Supprimer**) puis recréez-le en suivant l'[Étape 2 de la Méthode 1](#étape-2--création-du-conteneur) avec exactement les mêmes paramètres, en particulier le même dossier `docker/element` monté sur `/data`. Supprimer le conteneur n'efface pas ce dossier.
 
 **Si le conteneur a été créé avec Docker Compose (Méthode 2) :**
@@ -379,7 +402,7 @@ sudo docker-compose pull
 sudo docker-compose up -d
 ```
 
-`docker-compose up -d` recrée automatiquement le conteneur s'il utilise une image plus récente. Si votre `docker-compose.yml` date d'avant l'ajout des appels audio/vidéo, remplacez-le d'abord par la nouvelle version (ports 7881, 7882, 3478 et 49160-49169), en y reportant vos valeurs.
+`docker-compose up -d` recrée automatiquement le conteneur s'il utilise une image plus récente. Si votre `docker-compose.yml` date d'avant l'ajout des appels audio/vidéo ou du port d'Element Admin, remplacez-le d'abord par la nouvelle version (ports 8088, 7881, 7882, 3478 et 49160-49169), en y reportant vos valeurs, et créez la règle de proxy inversé du port 8443.
 
 #### Étape 3 : Vérifier le redémarrage
 
@@ -431,7 +454,7 @@ Depuis le dossier `docker/synology` :
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Le fichier `docker-compose.dev.yml` construit l'image locale `ess-synology:dev` et la sert sur `http://localhost:8080`, avec le compte `admin` / `Local-Dev-Admin-2026!`. Les données sont conservées dans un volume Docker nommé, et non dans un dossier Windows : PostgreSQL refuse de démarrer sur un montage NTFS, dont il ne peut pas contrôler les droits.
+Le fichier `docker-compose.dev.yml` construit l'image locale `ess-synology:dev` et la sert sur `http://localhost:8080` (Element Admin sur `http://localhost:8088`), avec le compte `admin` / `Local-Dev-Admin-2026!`. Les données sont conservées dans un volume Docker nommé, et non dans un dossier Windows : PostgreSQL refuse de démarrer sur un montage NTFS, dont il ne peut pas contrôler les droits.
 
 - Arrêter : **Ctrl + C**, ou `docker compose -f docker-compose.dev.yml down`.
 - Repartir de zéro (comptes, base de données, secrets) : `docker compose -f docker-compose.dev.yml down -v`.
@@ -449,7 +472,7 @@ uv run pytest -v tests/synology
 ```
 
 - `test_files.py` contrôle les fichiers de `docker/synology` sans Docker : fins de ligne LF, variables des templates et de `supervisord.conf` bien définies par l'image ou l'entrypoint, fichiers copiés par le `Dockerfile`, YAML valides.
-- `test_container.py` construit l'image `ess-synology:test`, puis lance un conteneur comme `docker-compose.dev.yml` (appels désactivés). Il vérifie les `.well-known`, MAS, Element Web et Element Admin, la connexion du compte administrateur initial, l'envoi d'un message, la commande `register-user`, l'absence d'en-têtes CORS en double, et la conservation des données après un redémarrage.
+- `test_container.py` construit l'image `ess-synology:test`, puis lance un conteneur comme `docker-compose.dev.yml` (appels désactivés). Il vérifie les `.well-known`, MAS, Element Web, Element Admin sur son port 8088 (configuration injectée, scripts, routes, redirection de `/admin`, enregistrement auprès de MAS), la connexion du compte administrateur initial, l'envoi d'un message, la commande `register-user`, l'absence d'en-têtes CORS en double, et la conservation des données après un redémarrage.
 - `test_container_calls.py` lance un second conteneur avec `ENABLE_MATRIX_RTC=true`, `ENABLE_TURN=true` et une `PUBLIC_IP` fictive. Il vérifie la déclaration d'Element Call, le démarrage de LiveKit, de lk-jwt-service et de coturn, le relais des demandes de jeton par Synapse jusqu'au contrôle d'appartenance au salon, les identifiants TURN et l'IP annoncée. La délivrance complète d'un jeton et les flux audio/vidéo ne sont pas testés : lk-jwt-service rappelle le serveur par son adresse publique HTTPS, qui n'existe que sur le NAS.
 
 Chaque conteneur est publié sur un port libre de `127.0.0.1` et supprimé à la fin, avec son volume : les tests n'entrent pas en conflit avec `docker-compose.dev.yml`. Le premier lancement construit l'image et prend plusieurs minutes. Sans Docker, seuls les tests de `test_files.py` s'exécutent ; les autres sont ignorés.
@@ -468,8 +491,8 @@ Sous PowerShell, une variable se définit avant la commande : `$env:ESS_SYNOLOGY
 
 #### Limites du test local
 
-- **Fonctionnent** : Element Web, la connexion via MAS et la messagerie.
-- **Element Admin** : la page `/admin/` reste blanche, en local comme sur le NAS. Element Admin est compilé pour être servi à la racine d'un domaine : ses scripts sont demandés en `/assets/…`, adresse servie par Element Web. Le test `test_element_admin` est marqué comme échec attendu (`xfail`) tant que ce n'est pas corrigé. Les navigateurs considèrent `http://localhost` comme sûr, HTTPS n'est donc pas nécessaire.
+- **Fonctionnent** : Element Web, la connexion via MAS et la messagerie. Les navigateurs considèrent `http://localhost` comme sûr, HTTPS n'est donc pas nécessaire.
+- **Element Admin** : la console s'affiche sur `http://localhost:8088`, mais la connexion échoue. Element Admin cherche toujours le serveur à l'adresse `https://<SERVER_NAME>/.well-known/matrix/client`, en HTTPS, ce que le test local ne fournit pas. La connexion se teste sur le NAS.
 - **Appels audio/vidéo** : ils sont désactivés (`ENABLE_MATRIX_RTC=false`, `ENABLE_TURN=false`). Element Call exige une adresse en HTTPS (`wss://`) et une IP publique joignable : ils se testent sur le NAS.
 - **Applications mobiles** : elles ne peuvent pas joindre `localhost`. Testez-les sur le NAS.
-- **Port 8080 déjà utilisé** : remplacez `"8080:8080"` par `"8090:8080"` dans `docker-compose.dev.yml`, et `PUBLIC_BASEURL` par `http://localhost:8090`.
+- **Port 8080 déjà utilisé** : remplacez `"8080:8080"` par `"8090:8080"` dans `docker-compose.dev.yml`, et `PUBLIC_BASEURL` par `http://localhost:8090`. De même pour le port 8088 : remplacez `"8088:8088"` par `"8098:8088"`, et ajoutez `ADMIN_BASEURL=http://localhost:8098`.

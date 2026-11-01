@@ -79,11 +79,10 @@
         }
     }
 
-    # Element Admin Console
-    handle_path /admin* {
-        root * /var/www/element-admin
-        file_server
-        try_files {path} /index.html
+    # Element Admin est servi sur son propre port (Caddyfile-admin.template) : il ne fonctionne
+    # qu'à la racine d'une origine (scripts en /assets/..., retour de connexion sur /callback)
+    handle /admin* {
+        redir ${ADMIN_BASEURL}/
     }
 
     # Element Web Client

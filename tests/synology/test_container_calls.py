@@ -13,13 +13,21 @@ from .utils import run_ess_container
 # Adresse de documentation (RFC 5737) : évite toute découverte de l'IP publique par STUN
 PUBLIC_IP = "203.0.113.10"
 
+ADMIN_BASEURL = "https://admin.example.com:9443"
+
 # Synapse relaie ces endpoints vers le MatrixRTC Authorisation Service (MSC4512)
 PROXIED_MATRIX_RTC_PATH = "/_matrix/client/unstable/io.element.msc4195/rtc/livekit"
 
 
 @pytest.fixture(scope="module")
 def ess(ess_image):
-    envs = {"ENABLE_MATRIX_RTC": "true", "ENABLE_TURN": "true", "PUBLIC_IP": PUBLIC_IP}
+    envs = {
+        "ENABLE_MATRIX_RTC": "true",
+        "ENABLE_TURN": "true",
+        "PUBLIC_IP": PUBLIC_IP,
+        # Barre oblique finale volontaire : l'entrypoint doit la retirer
+        "ADMIN_BASEURL": f"{ADMIN_BASEURL}/",
+    }
     with run_ess_container(ess_image, "calls", envs) as ess:
         yield ess
 
@@ -112,3 +120,9 @@ def test_public_ip_is_announced(ess):
     livekit = ess.read_file("/data/config/livekit.yaml")
     assert "use_external_ip: false" in livekit
     assert f'node_ip: "{PUBLIC_IP}"' in livekit
+
+
+def test_admin_baseurl_override(ess):
+    response = ess.get("/admin")
+    assert response.status_code == 302
+    assert response.headers["location"] == f"{ADMIN_BASEURL}/"
