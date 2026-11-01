@@ -439,9 +439,37 @@ Le fichier `docker-compose.dev.yml` construit l'image locale `ess-synology:dev` 
 
 Pour tester l'image publiée plutôt que le code local, remplacez la construction par `docker pull ghcr.io/<votre-utilisateur-ou-organisation>/<nom-du-dépôt>/ess-synology:latest`. Pour reproduire un NAS ARM, ajoutez `--platform linux/arm64` : l'image est alors émulée, et nettement plus lente.
 
+#### Tests automatisés
+
+La suite `tests/synology` vérifie l'image sans intervention manuelle. Elle nécessite [uv](https://docs.astral.sh/uv/getting-started/installation/) et Docker Desktop démarré. Depuis la racine du dépôt :
+
+```powershell
+uv sync
+uv run pytest -v tests/synology
+```
+
+- `test_files.py` contrôle les fichiers de `docker/synology` sans Docker : fins de ligne LF, variables des templates et de `supervisord.conf` bien définies par l'image ou l'entrypoint, fichiers copiés par le `Dockerfile`, YAML valides.
+- `test_container.py` construit l'image `ess-synology:test`, puis lance un conteneur comme `docker-compose.dev.yml` (appels désactivés). Il vérifie les `.well-known`, MAS, Element Web et Element Admin, la connexion du compte administrateur initial, l'envoi d'un message, la commande `register-user`, l'absence d'en-têtes CORS en double, et la conservation des données après un redémarrage.
+- `test_container_calls.py` lance un second conteneur avec `ENABLE_MATRIX_RTC=true`, `ENABLE_TURN=true` et une `PUBLIC_IP` fictive. Il vérifie la déclaration d'Element Call, le démarrage de LiveKit, de lk-jwt-service et de coturn, le relais des demandes de jeton par Synapse jusqu'au contrôle d'appartenance au salon, les identifiants TURN et l'IP annoncée. La délivrance complète d'un jeton et les flux audio/vidéo ne sont pas testés : lk-jwt-service rappelle le serveur par son adresse publique HTTPS, qui n'existe que sur le NAS.
+
+Chaque conteneur est publié sur un port libre de `127.0.0.1` et supprimé à la fin, avec son volume : les tests n'entrent pas en conflit avec `docker-compose.dev.yml`. Le premier lancement construit l'image et prend plusieurs minutes. Sans Docker, seuls les tests de `test_files.py` s'exécutent ; les autres sont ignorés.
+
+Variables d'environnement utiles :
+
+| Variable | Effet |
+|---|---|
+| `ESS_SYNOLOGY_IMAGE` | Teste une image existante au lieu de la construire (ex : `ghcr.io/devfred78/ess-helm/ess-synology:latest`) |
+| `ESS_SYNOLOGY_KEEP=1` | Conserve les conteneurs après les tests, pour les inspecter (`docker ps -a`) ; supprimez-les ensuite avec `docker rm -f -v` |
+| `ESS_SYNOLOGY_STARTUP_TIMEOUT` | Délai maximal de démarrage en secondes (600 par défaut) ; à augmenter pour une image émulée |
+
+Les journaux des conteneurs sont enregistrés dans `ess-helm-logs/synology/`. Le workflow GitHub Actions `docker-synology.yml` exécute la même suite avant de publier l'image.
+
+Sous PowerShell, une variable se définit avant la commande : `$env:ESS_SYNOLOGY_IMAGE = "ghcr.io/..."`.
+
 #### Limites du test local
 
-- **Fonctionnent** : Element Web, Element Admin, la connexion via MAS et la messagerie. Les navigateurs considèrent `http://localhost` comme sûr, HTTPS n'est donc pas nécessaire.
+- **Fonctionnent** : Element Web, la connexion via MAS et la messagerie.
+- **Element Admin** : la page `/admin/` reste blanche, en local comme sur le NAS. Element Admin est compilé pour être servi à la racine d'un domaine : ses scripts sont demandés en `/assets/…`, adresse servie par Element Web. Le test `test_element_admin` est marqué comme échec attendu (`xfail`) tant que ce n'est pas corrigé. Les navigateurs considèrent `http://localhost` comme sûr, HTTPS n'est donc pas nécessaire.
 - **Appels audio/vidéo** : ils sont désactivés (`ENABLE_MATRIX_RTC=false`, `ENABLE_TURN=false`). Element Call exige une adresse en HTTPS (`wss://`) et une IP publique joignable : ils se testent sur le NAS.
 - **Applications mobiles** : elles ne peuvent pas joindre `localhost`. Testez-les sur le NAS.
 - **Port 8080 déjà utilisé** : remplacez `"8080:8080"` par `"8090:8080"` dans `docker-compose.dev.yml`, et `PUBLIC_BASEURL` par `http://localhost:8090`.

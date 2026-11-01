@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'docker/synology/**'
+      - 'tests/synology/**'
       - '.github/workflows/docker-synology.yml'
       - 'docker-bake.hcl'
   push:
@@ -26,7 +27,41 @@ permissions:
   contents: read
 
 jobs:
+  test:
+    name: Test ESS Synology container image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
+        with:
+          activate-environment: true
+
+      - name: Set up UV environment
+        run: uv sync
+
+      - name: Build the image
+        run: docker build -t ess-synology:test docker/synology
+
+      - name: Test with pytest
+        env:
+          ESS_SYNOLOGY_IMAGE: ess-synology:test
+        run: pytest -vv tests/synology
+
+      - name: Upload container logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: ess-synology-logs
+          path: ess-helm-logs/synology
+          retention-days: 7
+
   docker-build-and-push:
+    needs: test
     permissions:
       contents: read
       packages: write
